@@ -1979,6 +1979,12 @@ function SettingsPanel({
                 onClick={() => setActiveSection('notifications')}
               />
               <SettingsNavItem 
+                icon={Eye} 
+                label="Affichage" 
+                active={activeSection === 'affichage'}
+                onClick={() => setActiveSection('affichage')}
+              />
+              <SettingsNavItem 
                 icon={Lock} 
                 label="Sécurité" 
                 active={activeSection === 'securite'}
