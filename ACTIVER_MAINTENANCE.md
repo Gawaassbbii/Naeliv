@@ -1,8 +1,8 @@
 # 🔧 Activer/Désactiver le mode maintenance
 
-## Option 1 : Utiliser le middleware (Recommandé)
+## Option 1 : Utiliser le proxy (Recommandé)
 
-Le middleware redirige automatiquement tous les visiteurs vers `/maintenance` si la variable d'environnement est activée.
+Le proxy (Next.js 16+) redirige automatiquement tous les visiteurs vers `/maintenance` si la variable d'environnement est activée.
 
 ### Activer la maintenance
 
@@ -54,13 +54,13 @@ Voir le fichier `DESACTIVER_DOMAINE_VERCEL.md` pour les instructions complètes.
 
 | Option | Site accessible | Webhooks fonctionnent | Facile à réactiver |
 |--------|----------------|---------------------|-------------------|
-| Middleware | Non (page maintenance) | ✅ Oui | ✅ Très facile |
+| Proxy | Non (page maintenance) | ✅ Oui | ✅ Très facile |
 | Retirer domaine Vercel | Non | ✅ Oui | ✅ Facile |
 | Désactiver DNS | Non | ✅ Oui | ⚠️ Moyen |
 
 ## Recommandation
 
-**Utilisez le middleware** si vous voulez :
+**Utilisez le proxy** si vous voulez :
 - Garder le domaine actif
 - Afficher une page de maintenance professionnelle
 - Pouvoir activer/désactiver facilement
