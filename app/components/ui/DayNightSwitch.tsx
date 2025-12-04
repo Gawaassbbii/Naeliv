@@ -36,7 +36,7 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1, duration: 0.2 }}
-            className="absolute top-1.5 left-4"
+            className="absolute top-1 left-3 z-10"
           >
             <Star className="w-2 h-2 text-yellow-200 fill-yellow-200" />
           </motion.div>
@@ -44,7 +44,7 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.15, duration: 0.2 }}
-            className="absolute top-3 left-6"
+            className="absolute top-2.5 left-5 z-10"
           >
             <Star className="w-1.5 h-1.5 text-yellow-100 fill-yellow-100" />
           </motion.div>
@@ -52,7 +52,7 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.2 }}
-            className="absolute top-1 left-8"
+            className="absolute top-0.5 left-7 z-10"
           >
             <Star className="w-1 h-1 text-yellow-100 fill-yellow-100" />
           </motion.div>
@@ -64,33 +64,33 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
         <>
           <motion.div
             initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 0.7, x: 0 }}
+            animate={{ opacity: 0.8, x: 0 }}
             transition={{ delay: 0.1, duration: 0.3 }}
-            className="absolute top-1 right-6"
+            className="absolute top-0.5 right-5 z-10"
           >
-            <Cloud className="w-3.5 h-3.5 text-white fill-white/60" />
+            <Cloud className="w-3.5 h-3.5 text-white fill-white/70" />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 0.5, x: 0 }}
+            animate={{ opacity: 0.6, x: 0 }}
             transition={{ delay: 0.15, duration: 0.3 }}
-            className="absolute top-3 right-10"
+            className="absolute top-2.5 right-9 z-10"
           >
-            <Cloud className="w-2.5 h-2.5 text-white fill-white/50" />
+            <Cloud className="w-2.5 h-2.5 text-white fill-white/60" />
           </motion.div>
         </>
       )}
 
       {/* Soleil/Lune qui se déplace */}
       <motion.div
-        className="absolute h-7 w-7 rounded-full flex items-center justify-center shadow-lg"
+        className="absolute h-7 w-7 rounded-full flex items-center justify-center shadow-lg z-20"
         style={{
           left: '2px',
           top: '50%',
           transform: 'translateY(-50%)',
         }}
         animate={{ 
-          x: checked ? 28 : 2, // 64px (w-16) - 28px (w-7) - 2px (left) - 6px (padding) = 28px
+          x: checked ? 34 : 0, // 64px (w-16) - 28px (w-7) - 2px (left) = 34px
         }}
         transition={{ 
           type: "spring", 
@@ -115,20 +115,12 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
           }}
         />
         <motion.div
-          className="relative z-10"
-          animate={{
-            opacity: checked ? [0.8, 1, 0.8] : [0.9, 1, 0.9],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+          className="relative z-10 flex items-center justify-center"
         >
           {checked ? (
-            <Moon className="w-5 h-5 text-indigo-900 drop-shadow-sm" strokeWidth={1.5} />
+            <Moon className="w-5 h-5 text-indigo-900 drop-shadow-md" strokeWidth={1.5} fill="currentColor" />
           ) : (
-            <Sun className="w-5 h-5 text-orange-600 drop-shadow-sm" strokeWidth={1.5} />
+            <Sun className="w-5 h-5 text-orange-600 drop-shadow-md" strokeWidth={1.5} fill="currentColor" />
           )}
         </motion.div>
       </motion.div>
