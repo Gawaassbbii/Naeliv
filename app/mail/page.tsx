@@ -357,10 +357,10 @@ function MailPageContent() {
         in_reply_to: email.in_reply_to || null, // Store in_reply_to for filtering
         message_id: email.message_id || null, // Store message_id
         received_at: email.received_at || email.created_at, // Store received_at or created_at
-        // Map body from Supabase columns (try all possible column names)
-        body: email.body || email.text_content || email.text || email.body_text || null,
-        // Map body_html from Supabase columns (try all possible column names)
-        body_html: email.body_html || email.html_content || email.html || email.body_html_content || null,
+        // Map body from Supabase columns (body is the primary column, text_content is fallback)
+        body: email.body !== null && email.body !== undefined ? email.body : (email.text_content || null),
+        // Map body_html from Supabase columns (body_html is the primary column, html_content is fallback)
+        body_html: email.body_html !== null && email.body_html !== undefined ? email.body_html : (email.html_content || null),
       }));
       
       // Debug: Log first email to check content
