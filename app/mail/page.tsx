@@ -278,7 +278,8 @@ function MailPageContent() {
         break;
       case 'replied':
         // For replied emails, filter by folder='sent' and has in_reply_to (is a reply)
-        query = query.eq('folder', 'sent').eq('deleted', false).not('in_reply_to', 'is', null);
+        // We'll filter client-side since Supabase .not('is', null) syntax is tricky
+        query = query.eq('folder', 'sent').eq('deleted', false);
         break;
       default:
         query = query.eq('archived', false).eq('deleted', false);
@@ -310,7 +311,7 @@ function MailPageContent() {
 
     if (data && data.length > 0) {
       // Transform Supabase data to match our email format
-      const transformedEmails = data.map((email: any) => ({
+      const transformedEmails = filteredData.map((email: any) => ({
         id: email.id,
         from: email.from_name || email.from_email,
         subject: email.subject,
