@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
       folder: 'sent',
       message_id: emailData?.id || `sent-${Date.now()}`,
       in_reply_to: inReplyTo || null,
-      references: references || inReplyTo || null,
+      email_references: references || inReplyTo || null,
       created_at: new Date().toISOString(),
       received_at: new Date().toISOString(), // Utiliser received_at pour la date
     };
