@@ -1066,6 +1066,8 @@ const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenMode
       language={language}
       setTheme={setTheme}
       setLanguage={setLanguage}
+      countVisibility={countVisibility}
+      setCountVisibility={setCountVisibility}
     />
     </>
   );
@@ -2001,6 +2003,56 @@ function SettingsPanel({
 
           {/* Right Content */}
           <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+            {activeSection === 'affichage' && (
+              <div className="p-8">
+                <h1 className="text-[32px] font-bold mb-8 text-black dark:text-white">Affichage</h1>
+                
+                <div className="space-y-6 max-w-3xl mx-auto">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                    <h2 className="text-[20px] font-semibold mb-4 text-black dark:text-white">Compteurs de dossiers</h2>
+                    <p className="text-[14px] text-gray-600 dark:text-gray-400 mb-6">
+                      Choisissez quels compteurs afficher dans la barre latérale
+                    </p>
+                    
+                    <div className="space-y-3">
+                      {[
+                        { key: 'inbox', label: 'Boîte de réception', icon: Inbox },
+                        { key: 'starred', label: 'Favoris', icon: Star },
+                        { key: 'sent', label: 'Envoyés', icon: Send },
+                        { key: 'replied', label: 'Répondus', icon: Reply },
+                        { key: 'archived', label: 'Archivés', icon: Archive },
+                        { key: 'trash', label: 'Corbeille', icon: Trash2 },
+                      ].map(({ key, label, icon: Icon }) => (
+                        <div key={key} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <Icon size={18} className="text-gray-600 dark:text-gray-400" />
+                            <span className="text-[14px] text-gray-700 dark:text-gray-300">{label}</span>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setCountVisibility(prev => ({
+                                ...prev,
+                                [key]: !prev[key],
+                              }));
+                            }}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              countVisibility[key] ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                countVisibility[key] ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeSection === 'fonctionnalites' && (
               <div className="p-8">
                 <h1 className="text-[32px] font-bold mb-8 text-black dark:text-white">Fonctionnalités Naeliv</h1>
