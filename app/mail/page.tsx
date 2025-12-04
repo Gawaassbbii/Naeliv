@@ -2105,6 +2105,7 @@ function SettingsPanel({
                               style={{
                                 left: '2px',
                                 top: '2px',
+                                border: '1px solid',
                               }}
                               animate={{ 
                                 x: countVisibility[key] ? 22 : 0,
@@ -2115,11 +2116,6 @@ function SettingsPanel({
                                 stiffness: 500, 
                                 damping: 30,
                                 mass: 0.5
-                              }}
-                              style={{
-                                left: '2px',
-                                top: '2px',
-                                border: '1px solid',
                               }}
                             />
                           </motion.button>
