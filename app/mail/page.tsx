@@ -10,7 +10,6 @@ import Link from 'next/link';
 import { useTheme, ThemeProvider } from '@/app/contexts/ThemeContext';
 import { translations } from '@/app/translations/mail';
 import { Switch } from '@/app/components/ui/switch';
-import DayNightSwitch from '@/app/components/ui/DayNightSwitch';
 
 // ============================================================================
 // CONSTANTS
@@ -2118,7 +2117,6 @@ function SettingsPanel({
                     description={userPlan === 'pro' ? "Recevez vos emails par lots à heures fixes pour rester concentré" : "Recevez vos emails par lots à heures fixes (limité avec Essential)"}
                     enabled={zenModeActive}
                     onToggle={() => onZenModeChange(!zenModeActive)}
-                    useDayNightSwitch={true}
                   />
 
                   {/* Smart Paywall - Disponible pour tous, mais réglage du prix uniquement pour PRO */}
@@ -2612,10 +2610,9 @@ interface FeatureCardProps {
   additionalSettings?: React.ReactNode;
   disabled?: boolean;
   disabledMessage?: string;
-  useDayNightSwitch?: boolean;
 }
 
-function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onToggle, additionalSettings, disabled = false, disabledMessage, useDayNightSwitch = false }: FeatureCardProps) {
+function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onToggle, additionalSettings, disabled = false, disabledMessage }: FeatureCardProps) {
   return (
     <div className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl p-6 shadow-sm ${disabled ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between gap-4">
@@ -2631,18 +2628,11 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
           </div>
         </div>
         <div className="flex-shrink-0 ml-4">
-          {useDayNightSwitch ? (
-            <DayNightSwitch
-              checked={enabled}
-              onChange={() => onToggle()}
-            />
-          ) : (
-            <Switch
-              checked={enabled}
-              onChange={onToggle}
-              disabled={disabled}
-            />
-          )}
+          <Switch
+            checked={enabled}
+            onChange={onToggle}
+            disabled={disabled}
+          />
         </div>
       </div>
     </div>
@@ -2659,17 +2649,16 @@ interface NotificationCardProps {
 function NotificationCard({ title, description, enabled, onToggle }: NotificationCardProps) {
   return (
     <div className="bg-gray-100 dark:bg-gray-800 rounded-xl p-6 border border-gray-300 dark:border-gray-700 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
           <h3 className="text-[16px] font-semibold text-black dark:text-white mb-1">{title}</h3>
           <p className="text-[14px] text-gray-600 dark:text-gray-400">{description}</p>
         </div>
-        <div className="flex-shrink-0 ml-4">
-          <Switch
-            checked={enabled}
-            onChange={onToggle}
-          />
-        </div>
+        <Switch
+          checked={enabled}
+          onChange={onToggle}
+          className="ml-4"
+        />
       </div>
     </div>
   );
@@ -2691,17 +2680,15 @@ function SmartPaywallCard({ enabled, onToggle, price, onPriceChange, userPlan }:
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-300 dark:border-gray-700 shadow-sm">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <Shield size={24} className="text-green-600 dark:text-green-500 flex-shrink-0" strokeWidth={1.5} />
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Shield size={24} className="text-green-600 dark:text-green-500" strokeWidth={1.5} />
           <h3 className="text-[18px] font-semibold text-black dark:text-white">Smart Paywall</h3>
         </div>
-        <div className="flex-shrink-0">
-          <Switch
-            checked={enabled}
-            onChange={onToggle}
-          />
-        </div>
+        <Switch
+          checked={enabled}
+          onChange={onToggle}
+        />
       </div>
 
       {/* Description */}
