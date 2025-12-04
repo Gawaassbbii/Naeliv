@@ -2721,7 +2721,7 @@ function SmartPaywallCard({ enabled, onToggle, price, onPriceChange, userPlan }:
         </div>
         <motion.button
           onClick={onToggle}
-          className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${
+          className={`relative w-11 h-6 rounded-full transition-colors duration-300 ease-in-out flex-shrink-0 ${
             enabled ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'
           }`}
           whileTap={{ scale: 0.95 }}
