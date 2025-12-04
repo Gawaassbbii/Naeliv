@@ -1101,7 +1101,7 @@ interface SidebarProps {
 }
 
 // Memoize Sidebar to prevent unnecessary re-renders
-const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setActiveFolder, folderCounts, countVisibility, onComposeNew }: SidebarProps) {
+const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setActiveFolder, folderCounts, countVisibility, setCountVisibility, onComposeNew }: SidebarProps) {
   const { language } = useTheme();
   const t = translations[language];
   
@@ -1113,6 +1113,14 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
     trash: 0,
     sent: 0,
     replied: 0,
+  };
+
+  // Fonction pour masquer un compteur
+  const handleHideCount = (folderKey: string) => {
+    setCountVisibility(prev => ({
+      ...prev,
+      [folderKey]: false,
+    }));
   };
   
   return (
