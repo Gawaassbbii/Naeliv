@@ -2678,24 +2678,19 @@ function NotificationCard({ title, description, enabled, onToggle }: Notificatio
         </div>
         <motion.button
           onClick={onToggle}
-          className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ml-4 ${
+          className={`relative w-11 h-6 rounded-full transition-colors duration-300 ease-in-out flex-shrink-0 ml-4 ${
             enabled ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'
           }`}
           whileTap={{ scale: 0.95 }}
         >
-          <motion.div
-            className="absolute rounded-full z-10"
+          <motion.span
+            className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
             style={{
-              top: '2px',
               left: '2px',
-              width: '20px',
-              height: '20px',
-              backgroundColor: '#ffffff',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-              border: '1px solid #e5e7eb'
+              top: '2px',
             }}
-            animate={{ x: enabled ? 24 : 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            animate={{ x: enabled ? 22 : 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }}
           />
         </motion.button>
       </div>
