@@ -1434,7 +1434,7 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
 
       // Préparer les headers pour la réponse (fil de discussion)
       const inReplyTo = email.message_id || email.id?.toString();
-      const references = email.references || inReplyTo;
+      const references = email.email_references || inReplyTo;
 
       // Envoyer l'email via l'API
       const response = await fetch('/api/send', {
