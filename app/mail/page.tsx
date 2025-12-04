@@ -819,7 +819,6 @@ function MailPageContent() {
           setActiveFolder={setActiveFolder}
           folderCounts={folderCounts}
           countVisibility={countVisibility}
-          setCountVisibility={setCountVisibility}
           onComposeNew={handleComposeNew}
         />
 
@@ -1103,7 +1102,7 @@ interface SidebarProps {
 }
 
 // Memoize Sidebar to prevent unnecessary re-renders
-const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setActiveFolder, folderCounts, countVisibility, setCountVisibility, onComposeNew }: SidebarProps) {
+const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setActiveFolder, folderCounts, countVisibility, onComposeNew }: SidebarProps) {
   const { language } = useTheme();
   const t = translations[language];
   
@@ -1115,14 +1114,6 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
     trash: 0,
     sent: 0,
     replied: 0,
-  };
-
-  // Fonction pour masquer un compteur
-  const handleHideCount = (folderKey: string) => {
-    setCountVisibility(prev => ({
-      ...prev,
-      [folderKey]: false,
-    }));
   };
   
   return (
@@ -1173,8 +1164,6 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           label={t.inbox} 
           active={activeFolder === 'inbox'} 
           count={countVisibility?.inbox ? safeFolderCounts.inbox : undefined}
-          folderKey="inbox"
-          onHideCount={handleHideCount}
           onClick={() => setActiveFolder('inbox')}
         />
         <NavItem 
@@ -1182,8 +1171,6 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           label={t.starred} 
           active={activeFolder === 'starred'}
           count={countVisibility?.starred ? safeFolderCounts.starred : undefined}
-          folderKey="starred"
-          onHideCount={handleHideCount}
           onClick={() => setActiveFolder('starred')}
         />
         <NavItem 
@@ -1191,8 +1178,6 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           label={t.sent}
           active={activeFolder === 'sent'}
           count={countVisibility?.sent ? safeFolderCounts.sent : undefined}
-          folderKey="sent"
-          onHideCount={handleHideCount}
           onClick={() => setActiveFolder('sent')}
         />
         <NavItem 
@@ -1200,8 +1185,6 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           label={t.replied} 
           active={activeFolder === 'replied'}
           count={countVisibility?.replied ? safeFolderCounts.replied : undefined}
-          folderKey="replied"
-          onHideCount={handleHideCount}
           onClick={() => setActiveFolder('replied')}
         />
         <NavItem 
@@ -1209,8 +1192,6 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           label={t.archived} 
           active={activeFolder === 'archived'}
           count={countVisibility?.archived ? safeFolderCounts.archived : undefined}
-          folderKey="archived"
-          onHideCount={handleHideCount}
           onClick={() => setActiveFolder('archived')}
         />
         <NavItem 
@@ -1218,8 +1199,6 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           label={t.trash} 
           active={activeFolder === 'trash'}
           count={countVisibility?.trash ? safeFolderCounts.trash : undefined}
-          folderKey="trash"
-          onHideCount={handleHideCount}
           onClick={() => setActiveFolder('trash')}
         />
 
@@ -1244,20 +1223,9 @@ interface NavItemProps {
   active?: boolean;
   count?: number;
   onClick?: () => void;
-  folderKey?: string; // Clé du dossier pour la visibilité (inbox, starred, etc.)
-  onHideCount?: (folderKey: string) => void; // Callback pour masquer le compteur
 }
 
-function NavItem({ icon: Icon, label, active = false, count, onClick, folderKey, onHideCount }: NavItemProps) {
-  const [isHoveringCount, setIsHoveringCount] = useState(false);
-
-  const handleHideCount = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Empêcher le clic de déclencher onClick
-    if (folderKey && onHideCount) {
-      onHideCount(folderKey);
-    }
-  };
-
+function NavItem({ icon: Icon, label, active = false, count, onClick }: NavItemProps) {
   return (
     <motion.button
       onClick={onClick}
@@ -1274,24 +1242,9 @@ function NavItem({ icon: Icon, label, active = false, count, onClick, folderKey,
         <span>{label}</span>
       </div>
       {count !== undefined && count > 0 && (
-        <div
-          className="relative"
-          onMouseEnter={() => setIsHoveringCount(true)}
-          onMouseLeave={() => setIsHoveringCount(false)}
-        >
-          <span className="w-6 h-6 rounded-full bg-black dark:bg-white text-white dark:text-black text-[12px] font-medium flex items-center justify-center">
-            {count}
-          </span>
-          {isHoveringCount && folderKey && onHideCount && (
-            <button
-              onClick={handleHideCount}
-              className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center hover:bg-red-600 transition-colors z-10"
-              title="Masquer le compteur"
-            >
-              ×
-            </button>
-          )}
-        </div>
+        <span className="w-6 h-6 rounded-full bg-black dark:bg-white text-white dark:text-black text-[12px] font-medium flex items-center justify-center">
+          {count}
+        </span>
       )}
     </motion.button>
   );
