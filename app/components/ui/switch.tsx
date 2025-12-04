@@ -18,7 +18,7 @@ export function Switch({ checked, onChange, disabled = false, className = "" }: 
       aria-checked={checked}
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-shrink-0 ${className}`}
       whileTap={disabled ? {} : { scale: 0.95 }}
       animate={{
         backgroundColor: checked ? '#000000' : '#e5e7eb',
@@ -35,10 +35,11 @@ export function Switch({ checked, onChange, disabled = false, className = "" }: 
         className="absolute h-5 w-5 rounded-full bg-white shadow-lg"
         style={{
           left: '2px',
-          top: '2px',
+          top: '50%',
+          transform: 'translateY(-50%)',
         }}
         animate={{ 
-          x: checked ? 20 : 2,
+          x: checked ? 20 : 2, // 44px (w-11) - 20px (w-5) - 2px (left) - 2px (padding) = 20px
         }}
         transition={{ 
           type: "spring", 
