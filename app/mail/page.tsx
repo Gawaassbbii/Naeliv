@@ -2102,6 +2102,7 @@ function SettingsPanel({
                               className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
                               style={{
                                 left: '2px',
+                                top: '2px',
                               }}
                               animate={{ x: countVisibility[key] ? 22 : 0 }}
                               transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }}
