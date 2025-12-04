@@ -2099,6 +2099,7 @@ function SettingsPanel({
                               backgroundColor: countVisibility[key] ? '#000000' : '#d1d5db',
                             }}
                             transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            style={{ backgroundColor: countVisibility[key] ? '#000000' : '#d1d5db' }}
                           >
                             <motion.span
                               className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
@@ -2106,6 +2107,7 @@ function SettingsPanel({
                                 left: '2px',
                                 top: '2px',
                                 border: '1px solid',
+                                borderColor: countVisibility[key] ? '#000000' : '#d1d5db',
                               }}
                               animate={{ 
                                 x: countVisibility[key] ? 22 : 0,
@@ -2661,6 +2663,7 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
             backgroundColor: enabled ? '#000000' : '#d1d5db',
           }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
+          style={{ backgroundColor: enabled ? '#000000' : '#d1d5db' }}
         >
           <motion.span
             className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
@@ -2668,6 +2671,7 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
               left: '2px',
               top: '2px',
               border: '1px solid',
+              borderColor: enabled ? '#000000' : '#d1d5db',
             }}
             animate={{ 
               x: enabled ? 22 : 0,
