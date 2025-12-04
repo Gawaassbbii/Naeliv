@@ -27,7 +27,7 @@ export function Switch({ checked, onChange, disabled = false, className = "" }: 
       style={{ backgroundColor: checked ? '#000000' : '#e5e7eb' }}
     >
       <motion.span
-        className="absolute h-5 w-5 rounded-full bg-white shadow-sm"
+        className="absolute h-5 w-5 rounded-full bg-white shadow-md"
         style={{
           left: '2px',
           top: '2px',
@@ -37,9 +37,9 @@ export function Switch({ checked, onChange, disabled = false, className = "" }: 
         }}
         transition={{ 
           type: "spring", 
-          stiffness: 300, 
-          damping: 20,
-          mass: 0.8
+          stiffness: 400, 
+          damping: 25,
+          mass: 0.6
         }}
       />
     </motion.button>
