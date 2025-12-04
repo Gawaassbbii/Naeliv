@@ -1606,8 +1606,9 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
         <div className="prose max-w-none">
           {(() => {
             // Debug: Log email content when displaying
-            const bodyHtml = email.body_html;
-            const body = email.body;
+            // Check all possible property names
+            const bodyHtml = email.body_html || email.bodyHtml || email.html_content || email.htmlContent;
+            const body = email.body || email.text_content || email.textContent;
             const preview = email.preview;
             
             console.log('📧 [EMAIL VIEWER] Displaying email content:', {
@@ -1619,6 +1620,8 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
               bodyValue: body,
               bodyHtmlValue: bodyHtml,
               previewValue: preview,
+              allEmailKeys: Object.keys(email),
+              emailObject: email,
             });
             
             if (bodyHtml) {
