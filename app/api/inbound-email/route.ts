@@ -174,6 +174,15 @@ export async function POST(request: NextRequest) {
         dataKeys: body.data ? Object.keys(body.data) : [],
         fullBody: JSON.stringify(body, null, 2).substring(0, 2000), // Log first 2000 chars
       });
+      
+      // Vérifier si c'est un webhook inbound (email.received) ou outbound (email.delivered, email.bounced, etc.)
+      if (body.type !== 'email.received') {
+        console.log(`⚠️ [INBOUND EMAIL] Webhook de type "${body.type}" ignoré (attendu: "email.received")`);
+        return NextResponse.json(
+          { message: `Webhook type "${body.type}" ignored. Only "email.received" is processed.` },
+          { status: 200 }
+        );
+      }
     } catch (error) {
       console.error('📧 [INBOUND EMAIL] Erreur parsing JSON:', error);
       return NextResponse.json(
