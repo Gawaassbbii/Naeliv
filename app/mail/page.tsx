@@ -789,6 +789,8 @@ function MailPageContent() {
         setSearchQuery={setSearchQuery}
         countVisibility={countVisibility}
         setCountVisibility={setCountVisibility}
+        user={user}
+        userPlan={userPlan}
       />
 
       {/* Zen Mode Banner */}
@@ -959,10 +961,12 @@ interface HeaderProps {
   setSearchQuery: (query: string) => void;
   countVisibility: Record<string, boolean>;
   setCountVisibility: (visibility: Record<string, boolean>) => void;
+  user: any;
+  userPlan: 'essential' | 'pro';
 }
 
 // Memoize Header to prevent unnecessary re-renders
-const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenModeActive, searchQuery, setSearchQuery, countVisibility, setCountVisibility }: HeaderProps) {
+const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenModeActive, searchQuery, setSearchQuery, countVisibility, setCountVisibility, user, userPlan }: HeaderProps) {
   const { theme, language, setTheme, setLanguage } = useTheme();
   const t = translations[language];
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1073,6 +1077,8 @@ const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenMode
       setLanguage={setLanguage}
       countVisibility={countVisibility}
       setCountVisibility={setCountVisibility}
+      user={user}
+      userPlan={userPlan}
     />
     </>
   );
