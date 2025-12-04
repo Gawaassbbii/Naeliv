@@ -291,7 +291,8 @@ function MailPageContent() {
     // Apply folder-specific filters
     switch (folder) {
       case 'inbox':
-        query = query.eq('archived', false).eq('deleted', false);
+        // Inbox: not archived, not deleted, and folder is NOT 'sent' (to exclude sent emails)
+        query = query.eq('archived', false).eq('deleted', false).neq('folder', 'sent');
         break;
       case 'starred':
         query = query.eq('starred', true).eq('archived', false).eq('deleted', false);
@@ -1802,18 +1803,57 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
             >
               {t.archive}
             </motion.button>
-            <motion.button
-              onClick={() => {
-                if (emailIndex !== null) {
-                  onDelete(emailIndex);
-                }
-              }}
-              className="px-6 py-3 border border-red-300 dark:border-red-700 rounded-full text-[14px] hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Supprimer
-            </motion.button>
+            {activeFolder === 'trash' ? (
+              <motion.button
+                onClick={async () => {
+                  if (emailIndex !== null && email?.dbId) {
+                    try {
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) return;
+
+                      const { error } = await supabase
+                        .from('emails')
+                        .update({ deleted: false, deleted_at: null })
+                        .eq('id', email.dbId)
+                        .eq('user_id', user.id);
+
+                      if (error) {
+                        console.error('Error restoring email:', error);
+                        toast.error('Erreur lors de la restauration');
+                      } else {
+                        toast.success('Email restauré avec succès');
+                        // Recharger les emails
+                        loadEmails(activeFolder);
+                        loadFolderCounts();
+                        // Recharger aussi la boîte de réception
+                        loadEmails('inbox');
+                      }
+                    } catch (error: any) {
+                      console.error('Error restoring email:', error);
+                      toast.error('Erreur lors de la restauration');
+                    }
+                  }
+                }}
+                className="px-6 py-3 border border-green-300 dark:border-green-700 rounded-full text-[14px] hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Restaurer
+              </motion.button>
+            ) : (
+              <motion.button
+                onClick={() => {
+                  if (emailIndex !== null) {
+                    onDelete(emailIndex);
+                  }
+                }}
+                className="px-6 py-3 border border-red-300 dark:border-red-700 rounded-full text-[14px] hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Supprimer
+              </motion.button>
+            )}
           </div>
         )}
       </div>

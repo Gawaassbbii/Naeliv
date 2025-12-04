@@ -383,7 +383,7 @@ export async function POST(request: NextRequest) {
         p_has_paid_stamp: hasPaidStamp,
         p_archived: false,
         p_deleted: false,
-        p_starred: false,
+        p_starred: true, // Marquer automatiquement tous les nouveaux emails comme favoris
       });
 
       if (error) {
