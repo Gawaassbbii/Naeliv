@@ -1934,27 +1934,6 @@ function SettingsPanel({
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        setUserEmail(user.email);
-        
-        // Récupérer le plan depuis la table profiles
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('plan')
-          .eq('id', user.id)
-          .single();
-        
-        if (profile?.plan) {
-          setUserPlan(profile.plan as 'essential' | 'pro');
-        }
-      }
-    };
-    getUser();
-  }, []);
 
   if (!open) return null;
 
