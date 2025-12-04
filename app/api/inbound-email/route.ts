@@ -402,14 +402,28 @@ function extractEmailData(body: any) {
   // Format Resend Inbound
   if (body.type === 'email.received' || body.data) {
     const data = body.data || body;
+    
+    // Gérer le cas où 'to' est un tableau
+    let toEmail = '';
+    if (Array.isArray(data.to)) {
+      toEmail = data.to[0] || '';
+    } else {
+      toEmail = data.to || data.envelope?.to?.[0] || data.recipient || '';
+    }
+    
+    // Resend envoie le contenu dans des champs différents, il faut peut-être le récupérer via l'API
+    // Pour l'instant, on utilise les champs disponibles
+    const textBody = data.text || data['body-plain'] || data.body?.text || '';
+    const htmlBody = data.html || data['body-html'] || data.body?.html || '';
+    
     return {
-      fromEmail: data.from || data.from_email || data.envelope?.from,
+      fromEmail: data.from || data.from_email || data.envelope?.from || '',
       fromName: data.from_name || extractNameFromEmail(data.from),
-      to: data.to || data.envelope?.to?.[0] || data.recipient,
+      to: toEmail,
       subject: data.subject || '',
-      textBody: data.text || data['body-plain'] || '',
-      htmlBody: data.html || data['body-html'] || '',
-      preview: (data.text || data['body-plain'] || '').substring(0, 100),
+      textBody: textBody,
+      htmlBody: htmlBody,
+      preview: textBody.substring(0, 100) || htmlBody.replace(/<[^>]*>/g, '').substring(0, 100) || 'Pas de contenu',
     };
   }
   
@@ -454,18 +468,43 @@ function extractNameFromEmail(emailString?: string): string {
 
 // GET pour vérifier que l'endpoint fonctionne (sans données sensibles)
 export async function GET() {
-  return NextResponse.json(
-    { 
-      status: 'ok', 
-      message: 'Inbound email endpoint is ready',
-      timestamp: new Date().toISOString(),
-      security: {
-        rateLimitEnabled: true,
-        signatureVerification: true,
-        spamDetection: true,
-        maxEmailSize: `${MAX_EMAIL_SIZE / (1024 * 1024)}MB`,
-      }
-    },
-    { status: 200 }
-  );
+  try {
+    // Vérifier les variables d'environnement critiques
+    const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const hasSupabaseAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const hasServiceRoleKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const hasWebhookSecret = !!process.env.WEBHOOK_SECRET;
+    
+    return NextResponse.json(
+      { 
+        status: 'ok', 
+        message: 'Inbound email endpoint is ready',
+        timestamp: new Date().toISOString(),
+        environment: {
+          hasSupabaseUrl,
+          hasSupabaseAnonKey,
+          hasServiceRoleKey,
+          hasWebhookSecret,
+          nodeEnv: process.env.NODE_ENV || 'not set',
+        },
+        security: {
+          rateLimitEnabled: true,
+          signatureVerification: true,
+          spamDetection: true,
+          maxEmailSize: `${MAX_EMAIL_SIZE / (1024 * 1024)}MB`,
+        }
+      },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    return NextResponse.json(
+      { 
+        status: 'error',
+        message: 'Endpoint error',
+        error: error.message,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 }
+    );
+  }
 }
