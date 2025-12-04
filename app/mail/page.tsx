@@ -1098,6 +1098,7 @@ interface SidebarProps {
     sent: number;
     replied: number;
   };
+  countVisibility: Record<string, boolean>;
   onComposeNew: () => void;
 }
 
