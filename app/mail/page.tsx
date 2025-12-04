@@ -30,20 +30,27 @@ function MailPageContent() {
   const { theme, language, setTheme, setLanguage } = useTheme();
   const t = translations[language];
   // Récupérer l'état du zen mode depuis localStorage, par défaut false
-  const [zenModeActive, setZenModeActive] = useState(() => {
+  // Initialisé à false pour éviter les erreurs d'hydratation
+  const [zenModeActive, setZenModeActive] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  
+  // Charger depuis localStorage après le montage (côté client uniquement)
+  React.useEffect(() => {
+    setIsMounted(true);
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('zenModeActive');
-      return saved === 'true';
+      if (saved === 'true') {
+        setZenModeActive(true);
+      }
     }
-    return false;
-  });
+  }, []);
   
   // Sauvegarder l'état du zen mode dans localStorage quand il change
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isMounted && typeof window !== 'undefined') {
       localStorage.setItem('zenModeActive', zenModeActive.toString());
     }
-  }, [zenModeActive]);
+  }, [zenModeActive, isMounted]);
   
   // Force dark mode styles with inline styles
   React.useEffect(() => {
