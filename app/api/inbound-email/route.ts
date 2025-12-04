@@ -474,14 +474,50 @@ function extractEmailData(body: any) {
       toEmail = data.to || data.envelope?.to?.[0] || data.recipient || '';
     }
     
-    // Resend envoie le contenu dans des champs différents, il faut peut-être le récupérer via l'API
-    // Pour l'instant, on utilise les champs disponibles
-    let textBody = data.text || data['body-plain'] || data.body?.text || '';
-    let htmlBody = data.html || data['body-html'] || data.body?.html || '';
+    // Resend envoie le contenu dans des champs différents
+    // Essayer tous les champs possibles pour trouver le contenu
+    let textBody = data.text 
+      || data['body-plain'] 
+      || data['stripped-text']
+      || data.body?.text 
+      || data.body_text
+      || data.content?.text
+      || data.message?.text
+      || '';
     
-    // Si le contenu n'est pas dans le webhook, essayer de le récupérer via l'API Resend
+    let htmlBody = data.html 
+      || data['body-html'] 
+      || data['stripped-html']
+      || data.body?.html 
+      || data.body_html
+      || data.content?.html
+      || data.message?.html
+      || '';
+    
+    // Si le contenu est toujours vide, essayer de le récupérer depuis les attachments ou autres champs
+    // Resend peut aussi envoyer le contenu dans un format encodé
+    if (!textBody && !htmlBody && data.content) {
+      // Si content est une string, c'est peut-être le texte brut
+      if (typeof data.content === 'string') {
+        textBody = data.content;
+      } else if (data.content.text) {
+        textBody = data.content.text;
+      } else if (data.content.html) {
+        htmlBody = data.content.html;
+      }
+    }
+    
     // Resend fournit email_id dans le webhook, on peut l'utiliser pour récupérer le contenu
     const emailId = data.email_id;
+    
+    console.log('📧 [EXTRACT] Contenu extrait:', {
+      hasTextBody: !!textBody,
+      hasHtmlBody: !!htmlBody,
+      textBodyLength: textBody.length,
+      htmlBodyLength: htmlBody.length,
+      emailId: emailId,
+      dataKeys: Object.keys(data),
+    });
     
     return {
       fromEmail: data.from || data.from_email || data.envelope?.from || '',
