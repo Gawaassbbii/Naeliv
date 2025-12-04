@@ -1456,7 +1456,15 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erreur lors de l\'envoi');
+        console.error('❌ [SEND REPLY] Erreur API:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: data.error,
+          details: data.details,
+          fullData: data
+        });
+        const errorMessage = data.error || data.details?.message || `Erreur lors de l'envoi (${response.status})`;
+        throw new Error(errorMessage);
       }
 
       toast.success('Email envoyé avec succès');
