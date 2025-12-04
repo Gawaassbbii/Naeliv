@@ -2709,34 +2709,10 @@ function SmartPaywallCard({ enabled, onToggle, price, onPriceChange, userPlan }:
           <Shield size={24} className="text-green-600 dark:text-green-500" strokeWidth={1.5} />
           <h3 className="text-[18px] font-semibold text-black dark:text-white">Smart Paywall</h3>
         </div>
-        <motion.button
-          onClick={onToggle}
-          className="relative w-11 h-6 rounded-full flex-shrink-0"
-          whileTap={{ scale: 0.95 }}
-          animate={{
-            backgroundColor: enabled ? '#000000' : '#d1d5db',
-          }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
-        >
-          <motion.span
-            className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
-            style={{
-              left: '2px',
-              top: '2px',
-              border: '1px solid',
-            }}
-            animate={{ 
-              x: enabled ? 22 : 0,
-              borderColor: enabled ? '#000000' : '#d1d5db',
-            }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 500, 
-              damping: 30,
-              mass: 0.5
-            }}
-          />
-        </motion.button>
+        <Switch
+          checked={enabled}
+          onChange={onToggle}
+        />
       </div>
 
       {/* Description */}
