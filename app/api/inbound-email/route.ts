@@ -210,6 +210,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 6.5. Si le contenu est vide et qu'on a un email_id, récupérer le contenu via l'API Resend
+    // Note: L'API Resend emails.get() est pour les emails sortants, pas pour les emails entrants
+    // Pour les emails entrants, le contenu devrait être dans le webhook
+    // Cette section est commentée car l'API Resend ne permet pas de récupérer le contenu des emails entrants
+    /*
     if ((!emailData.textBody && !emailData.htmlBody) && emailData.emailId && resend) {
       try {
         console.log('📧 [INBOUND EMAIL] Récupération du contenu via API Resend pour email_id:', emailData.emailId);
@@ -219,7 +223,6 @@ export async function POST(request: NextRequest) {
           console.log('✅ [INBOUND EMAIL] Contenu récupéré via API Resend');
           const emailContent = emailContentResponse.data;
           // Mettre à jour les données avec le contenu récupéré
-          // Note: L'API Resend pour les emails entrants peut avoir une structure différente
           emailData.textBody = (emailContent as any).text || emailData.textBody || '';
           emailData.htmlBody = (emailContent as any).html || emailData.htmlBody || '';
           // Mettre à jour le preview
@@ -232,6 +235,7 @@ export async function POST(request: NextRequest) {
         // Continuer même si la récupération échoue
       }
     }
+    */
 
     // 7. Validation stricte des emails
     if (!isValidEmail(emailData.fromEmail)) {
