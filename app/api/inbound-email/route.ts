@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
       subject: sanitizeSubject(emailData.subject),
       textBody: emailData.textBody ? sanitizeText(emailData.textBody) : null,
       // CRITIQUE : Utiliser sanitizeEmailHTML pour protéger contre XSS
-      htmlBody: emailData.htmlBody ? sanitizeEmailHTML(emailData.htmlBody) : null,
+      htmlBody: emailData.htmlBody ? await sanitizeEmailHTML(emailData.htmlBody) : null,
       preview: extractPreview(emailData.textBody || emailData.htmlBody || '', 100),
     };
 

@@ -1,4 +1,22 @@
-import DOMPurify from 'isomorphic-dompurify';
+// Import dynamique pour éviter les problèmes avec jsdom en serverless
+let DOMPurify: any = null;
+let dompurifyLoaded = false;
+
+async function loadDOMPurify() {
+  if (dompurifyLoaded) return DOMPurify;
+  
+  try {
+    // Import dynamique pour éviter les erreurs en serverless
+    const dompurifyModule = await import('isomorphic-dompurify');
+    DOMPurify = dompurifyModule.default;
+    dompurifyLoaded = true;
+    return DOMPurify;
+  } catch (error) {
+    console.warn('⚠️ DOMPurify non disponible, utilisation de sanitization basique:', error);
+    dompurifyLoaded = true; // Marquer comme chargé pour éviter de réessayer
+    return null;
+  }
+}
 
 /**
  * Configuration de sécurité pour la sanitization des emails HTML
@@ -36,19 +54,46 @@ const SANITIZE_CONFIG = {
 };
 
 /**
+ * Sanitization basique sans DOMPurify (fallback)
+ */
+function basicSanitize(html: string): string {
+  // Supprimer les tags dangereux
+  let clean = html
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')
+    .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
+    .replace(/<object[^>]*>.*?<\/object>/gi, '')
+    .replace(/<embed[^>]*>/gi, '')
+    .replace(/on\w+="[^"]*"/gi, '') // Supprimer les événements onclick, onload, etc.
+    .replace(/on\w+='[^']*'/gi, '')
+    .replace(/javascript:/gi, '') // Supprimer javascript: dans les liens
+    .replace(/data:/gi, ''); // Supprimer data: URLs
+  
+  return clean;
+}
+
+/**
  * Nettoie le HTML d'un email pour éviter les attaques XSS
  * ⚠️ CRITIQUE : Utilisez cette fonction AVANT d'afficher tout HTML provenant d'emails externes
  * 
  * @param html - Le HTML brut de l'email
  * @returns Le HTML nettoyé et sécurisé
  */
-export function sanitizeEmailHTML(html: string | null | undefined): string {
+export async function sanitizeEmailHTML(html: string | null | undefined): Promise<string> {
   if (!html || typeof html !== 'string') {
     return '';
   }
   
-  // Nettoyer le HTML avec DOMPurify
-  const cleanHTML = DOMPurify.sanitize(html, SANITIZE_CONFIG);
+  // Essayer de charger DOMPurify
+  const dompurify = await loadDOMPurify();
+  
+  let cleanHTML: string;
+  if (dompurify) {
+    // Utiliser DOMPurify si disponible
+    cleanHTML = dompurify.sanitize(html, SANITIZE_CONFIG);
+  } else {
+    // Fallback : sanitization basique
+    cleanHTML = basicSanitize(html);
+  }
   
   // Post-traitement : forcer les liens externes à s'ouvrir dans un nouvel onglet avec sécurité
   const withSecureLinks = cleanHTML.replace(
@@ -105,13 +150,13 @@ export function extractTextFromHTML(html: string | null | undefined): string {
 /**
  * Génère un preview sécurisé d'un email
  */
-export function generateEmailPreview(
+export async function generateEmailPreview(
   html: string | null | undefined,
   text: string | null | undefined,
   maxLength: number = 100
-): string {
+): Promise<string> {
   // Préférer le texte brut s'il existe
-  const source = text || extractTextFromHTML(html);
+  const source = text || await extractTextFromHTML(html);
   
   if (!source) {
     return '';
