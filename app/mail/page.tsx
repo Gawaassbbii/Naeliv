@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check } from 'lucide-react';
+import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -51,7 +51,7 @@ function MailPageContent() {
   const [userPlan, setUserPlan] = useState<'essential' | 'pro'>('essential');
   const [selectedEmail, setSelectedEmail] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFolder, setActiveFolder] = useState<'inbox' | 'starred' | 'archived' | 'trash' | 'sent'>('inbox');
+  const [activeFolder, setActiveFolder] = useState<'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied'>('inbox');
   const [isLoading, setIsLoading] = useState(true);
   const [emails, setEmails] = useState<any[]>([]);
   const [folderCounts, setFolderCounts] = useState({
@@ -60,7 +60,13 @@ function MailPageContent() {
     archived: 0,
     trash: 0,
     sent: 0,
+    replied: 0,
   });
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [composeTo, setComposeTo] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -232,7 +238,7 @@ function MailPageContent() {
   };
 
   // Load emails from Supabase with server-side filtering
-  const loadEmails = async (folder: 'inbox' | 'starred' | 'archived' | 'trash' | 'sent' = 'inbox') => {
+  const loadEmails = async (folder: 'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied' = 'inbox') => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -250,8 +256,7 @@ function MailPageContent() {
     let query = supabase
       .from('emails')
       .select('*')
-      .eq('user_id', user.id)
-      .order('received_at', { ascending: false });
+      .eq('user_id', user.id);
 
     // Apply folder-specific filters
     switch (folder) {
@@ -268,12 +273,20 @@ function MailPageContent() {
         query = query.eq('deleted', true);
         break;
       case 'sent':
-        // For sent emails, we might need a different field or table
-        query = query.eq('deleted', false);
+        // For sent emails, filter by folder='sent' and no in_reply_to (not replies)
+        query = query.eq('folder', 'sent').eq('deleted', false).is('in_reply_to', null);
+        break;
+      case 'replied':
+        // For replied emails, filter by folder='sent' and has in_reply_to (is a reply)
+        query = query.eq('folder', 'sent').eq('deleted', false).not('in_reply_to', 'is', null);
         break;
       default:
         query = query.eq('archived', false).eq('deleted', false);
     }
+    
+    // Order by received_at or created_at (for sent emails)
+    query = query.order('received_at', { ascending: false, nullsFirst: false })
+                 .order('created_at', { ascending: false });
 
     const { data, error } = await query;
 
@@ -302,15 +315,19 @@ function MailPageContent() {
         from: email.from_name || email.from_email,
         subject: email.subject,
         preview: email.preview || email.body?.substring(0, 100) || '',
-        time: new Date(email.received_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        date: formatDate(new Date(email.received_at)),
-        daysAgo: Math.floor((Date.now() - new Date(email.received_at).getTime()) / (1000 * 60 * 60 * 24)),
+        time: new Date(email.received_at || email.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        date: formatDate(new Date(email.received_at || email.created_at)),
+        daysAgo: Math.floor((Date.now() - new Date(email.received_at || email.created_at).getTime()) / (1000 * 60 * 60 * 24)),
         read: !!email.read_at, // IMPORTANT: Utiliser read_at pour déterminer si l'email est lu
         starred: email.starred || false,
         archived: email.archived || false,
         deleted: email.deleted || false,
         hasPaidStamp: email.has_paid_stamp || false,
         dbId: email.id, // Store Supabase ID for updates
+        folder: email.folder || 'inbox', // Store folder
+        in_reply_to: email.in_reply_to || null, // Store in_reply_to for filtering
+        message_id: email.message_id || null, // Store message_id
+        received_at: email.received_at || email.created_at, // Store received_at or created_at
       }));
       setEmails(transformedEmails);
     } else {
@@ -327,7 +344,7 @@ function MailPageContent() {
 
     try {
       // Fetch all counts in parallel
-      const [inboxResult, starredResult, archivedResult, trashResult, sentResult] = await Promise.all([
+      const [inboxResult, starredResult, archivedResult, trashResult, sentResult, repliedResult] = await Promise.all([
         // Inbox: not archived, not deleted
         supabase
           .from('emails')
@@ -360,10 +377,23 @@ function MailPageContent() {
           .eq('user_id', user.id)
           .eq('deleted', true),
         
-        // Sent: For now, sent emails are not stored in the emails table
-        // They would need a separate table or a folder field
-        // Return 0 until sent emails are properly implemented
-        Promise.resolve({ count: 0, error: null }),
+        // Sent: folder='sent' and no in_reply_to (not replies)
+        supabase
+          .from('emails')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('folder', 'sent')
+          .eq('deleted', false)
+          .is('in_reply_to', null),
+        
+        // Replied: folder='sent' and has in_reply_to (is a reply)
+        supabase
+          .from('emails')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .eq('folder', 'sent')
+          .eq('deleted', false)
+          .not('in_reply_to', 'is', null),
       ]);
 
       setFolderCounts({
@@ -372,6 +402,7 @@ function MailPageContent() {
         archived: archivedResult.count || 0,
         trash: trashResult.count || 0,
         sent: sentResult.count || 0,
+        replied: repliedResult.count || 0,
       });
     } catch (error) {
       console.error('Error loading folder counts:', error);
@@ -463,8 +494,12 @@ function MailPageContent() {
         filtered = filtered.filter(e => e.deleted);
         break;
       case 'sent':
-        // For now, sent emails are not in the list
-        filtered = [];
+        // Filter sent emails (not replies)
+        filtered = filtered.filter(e => e.folder === 'sent' && !e.in_reply_to && !e.deleted);
+        break;
+      case 'replied':
+        // Filter replied emails (sent emails with in_reply_to)
+        filtered = filtered.filter(e => e.folder === 'sent' && e.in_reply_to && !e.deleted);
         break;
       default: // inbox
         filtered = filtered.filter(e => !e.archived && !e.deleted);
@@ -586,13 +621,89 @@ function MailPageContent() {
   // Reply to email - Set reply mode
   const handleReply = (email: any) => {
     // Cette fonction sera gérée dans EmailViewer avec un état local
-    // On passe juste l'email pour que EmailViewer puisse gérer l'état
+    // Après l'envoi, recharger les emails
+    loadEmails(activeFolder);
+    if (activeFolder !== 'sent') {
+      // Si on n'est pas dans "Envoyés", recharger aussi ce dossier
+      loadEmails('sent');
+    }
+    loadFolderCounts();
   };
 
   // Forward email - Set forward mode
   const handleForward = (email: any) => {
     // Cette fonction sera gérée dans EmailViewer avec un état local
-    // On passe juste l'email pour que EmailViewer puisse gérer l'état
+    // Après l'envoi, recharger les emails
+    loadEmails(activeFolder);
+    if (activeFolder !== 'sent') {
+      // Si on n'est pas dans "Envoyés", recharger aussi ce dossier
+      loadEmails('sent');
+    }
+    loadFolderCounts();
+  };
+
+  // Handle compose new message
+  const handleComposeNew = () => {
+    setIsComposeOpen(true);
+    setComposeTo('');
+    setComposeSubject('');
+    setComposeBody('');
+  };
+
+  const handleSendNewMessage = async () => {
+    if (!composeTo || !composeSubject || !composeBody.trim()) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      // Récupérer le token d'authentification
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        setIsSending(false);
+        return;
+      }
+
+      // Envoyer l'email via l'API
+      const response = await fetch('/api/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          to: composeTo,
+          subject: composeSubject,
+          text: composeBody,
+          html: `<p>${composeBody.replace(/\n/g, '<br>')}</p>`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de l\'envoi');
+      }
+
+      toast.success('Email envoyé avec succès');
+      
+      // Fermer la modale et réinitialiser
+      setIsComposeOpen(false);
+      setComposeTo('');
+      setComposeSubject('');
+      setComposeBody('');
+      
+      // Recharger les emails pour voir le message dans "Envoyés"
+      loadEmails('sent');
+      loadFolderCounts();
+    } catch (error: any) {
+      console.error('Erreur lors de l\'envoi:', error);
+      toast.error(error.message || 'Erreur lors de l\'envoi de l\'email');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   // Force dark mode styles with inline styles and useEffect
@@ -657,6 +768,7 @@ function MailPageContent() {
           activeFolder={activeFolder}
           setActiveFolder={setActiveFolder}
           folderCounts={folderCounts}
+          onComposeNew={handleComposeNew}
         />
 
         {/* Email List and Viewer - Takes remaining space */}
@@ -682,6 +794,107 @@ function MailPageContent() {
           />
         </div>
       </div>
+
+      {/* Compose Modal */}
+      {isComposeOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+          >
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-[20px] font-semibold text-black dark:text-white">Nouveau message</h2>
+              <button
+                onClick={() => setIsComposeOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div>
+                <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  À
+                </label>
+                <input
+                  type="email"
+                  value={composeTo}
+                  onChange={(e) => setComposeTo(e.target.value)}
+                  placeholder="destinataire@example.com"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-[14px] bg-white dark:bg-gray-800 text-black dark:text-white"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Objet
+                </label>
+                <input
+                  type="text"
+                  value={composeSubject}
+                  onChange={(e) => setComposeSubject(e.target.value)}
+                  placeholder="Sujet de l'email"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-[14px] bg-white dark:bg-gray-800 text-black dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={composeBody}
+                  onChange={(e) => setComposeBody(e.target.value)}
+                  placeholder="Écrivez votre message ici..."
+                  rows={12}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-[14px] bg-white dark:bg-gray-800 text-black dark:text-white resize-none"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
+              <motion.button
+                onClick={() => setIsComposeOpen(false)}
+                className="px-6 py-2 border border-gray-300 dark:border-gray-700 rounded-xl text-[14px] hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                disabled={isSending}
+              >
+                Annuler
+              </motion.button>
+              <motion.button
+                onClick={handleSendNewMessage}
+                disabled={isSending || !composeTo || !composeSubject || !composeBody.trim()}
+                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-[14px] font-medium hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                whileHover={{ scale: isSending ? 1 : 1.02 }}
+                whileTap={{ scale: isSending ? 1 : 0.98 }}
+              >
+                {isSending ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Envoi...
+                  </>
+                ) : (
+                  <>
+                    <Send size={16} />
+                    Envoyer
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
@@ -816,19 +1029,21 @@ const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenMode
 interface SidebarProps {
   user: any;
   userPlan?: 'essential' | 'pro';
-  activeFolder: 'inbox' | 'starred' | 'archived' | 'trash' | 'sent';
-  setActiveFolder: (folder: 'inbox' | 'starred' | 'archived' | 'trash' | 'sent') => void;
+  activeFolder: 'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied';
+  setActiveFolder: (folder: 'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied') => void;
   folderCounts: {
     inbox: number;
     starred: number;
     archived: number;
     trash: number;
     sent: number;
+    replied: number;
   };
+  onComposeNew: () => void;
 }
 
 // Memoize Sidebar to prevent unnecessary re-renders
-const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setActiveFolder, folderCounts }: SidebarProps) {
+const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setActiveFolder, folderCounts, onComposeNew }: SidebarProps) {
   const { language } = useTheme();
   const t = translations[language];
   
@@ -864,7 +1079,7 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
       {/* Compose Button */}
       <div className="p-4">
         <motion.button
-          onClick={() => alert('Fonctionnalité de composition d\'email à venir')}
+          onClick={onComposeNew}
           className="w-full px-4 py-3 bg-black dark:bg-white text-white dark:text-black rounded-full text-[14px] font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -895,6 +1110,13 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           active={activeFolder === 'sent'}
           count={folderCounts.sent}
           onClick={() => setActiveFolder('sent')}
+        />
+        <NavItem 
+          icon={Reply} 
+          label={t.replied} 
+          active={activeFolder === 'replied'}
+          count={folderCounts.replied}
+          onClick={() => setActiveFolder('replied')}
         />
         <NavItem 
           icon={Archive} 
@@ -971,6 +1193,7 @@ interface EmailListProps {
     archived: number;
     trash: number;
     sent: number;
+    replied: number;
   };
 }
 
@@ -1190,15 +1413,57 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
       return;
     }
     
-    // TODO: Implémenter l'envoi réel via API
-    console.log('Envoi de la réponse:', { to: replyTo, subject: replySubject, body: replyBody });
-    toast.success('Email envoyé avec succès');
-    
-    // Réinitialiser le formulaire
-    setIsReplying(false);
-    setReplyTo('');
-    setReplySubject('');
-    setReplyBody('');
+    try {
+      // Récupérer le token d'authentification
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      // Préparer les headers pour la réponse (fil de discussion)
+      const inReplyTo = email.message_id || email.id?.toString();
+      const references = email.references || inReplyTo;
+
+      // Envoyer l'email via l'API
+      const response = await fetch('/api/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          to: replyTo,
+          subject: replySubject,
+          text: replyBody,
+          html: `<p>${replyBody.replace(/\n/g, '<br>')}</p>`,
+          inReplyTo: inReplyTo || undefined,
+          references: references || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de l\'envoi');
+      }
+
+      toast.success('Email envoyé avec succès');
+      
+      // Réinitialiser le formulaire
+      setIsReplying(false);
+      setReplyTo('');
+      setReplySubject('');
+      setReplyBody('');
+      
+      // Appeler le callback parent pour recharger les emails
+      if (onReply) {
+        onReply(email);
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de l\'envoi:', error);
+      toast.error(error.message || 'Erreur lors de l\'envoi de l\'email');
+    }
   };
 
   const handleSendForward = async () => {
@@ -1207,15 +1472,51 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
       return;
     }
     
-    // TODO: Implémenter l'envoi réel via API
-    console.log('Envoi du transfert:', { to: forwardTo, subject: forwardSubject, body: forwardBody });
-    toast.success('Email transféré avec succès');
-    
-    // Réinitialiser le formulaire
-    setIsForwarding(false);
-    setForwardTo('');
-    setForwardSubject('');
-    setForwardBody('');
+    try {
+      // Récupérer le token d'authentification
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      // Envoyer l'email via l'API
+      const response = await fetch('/api/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          to: forwardTo,
+          subject: forwardSubject,
+          text: forwardBody,
+          html: `<p>${forwardBody.replace(/\n/g, '<br>')}</p>`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de l\'envoi');
+      }
+
+      toast.success('Email transféré avec succès');
+      
+      // Réinitialiser le formulaire
+      setIsForwarding(false);
+      setForwardTo('');
+      setForwardSubject('');
+      setForwardBody('');
+      
+      // Appeler le callback parent pour recharger les emails
+      if (onForward) {
+        onForward(email);
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de l\'envoi:', error);
+      toast.error(error.message || 'Erreur lors de l\'envoi de l\'email');
+    }
   };
 
   const handleCancelCompose = () => {
