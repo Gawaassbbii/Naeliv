@@ -2093,12 +2093,12 @@ function SettingsPanel({
                                 [key]: !prev[key],
                               }));
                             }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ease-in-out ${
                               countVisibility[key] ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'
                             }`}
                           >
                             <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 ease-in-out ${
                                 countVisibility[key] ? 'translate-x-6' : 'translate-x-1'
                               }`}
                             />
@@ -2637,7 +2637,7 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
         <motion.button
           onClick={disabled ? undefined : onToggle}
           disabled={disabled}
-          className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ml-4 ${
+          className={`relative w-12 h-6 rounded-full transition-colors duration-300 ease-in-out flex-shrink-0 ml-4 ${
             enabled ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'
           } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
           whileTap={disabled ? {} : { scale: 0.95 }}
@@ -2654,7 +2654,7 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
               border: '1px solid #e5e7eb'
             }}
             animate={{ x: enabled ? 24 : 0 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }}
           />
         </motion.button>
       </div>
