@@ -9,7 +9,7 @@ interface ThemeToggleProps {
   className?: string;
 }
 
-export function ThemeToggle({ isDark: boolean = false, onChange, className = "" }: ThemeToggleProps) {
+export function ThemeToggle({ isDark = false, onChange, className = "" }: ThemeToggleProps) {
   const [internalIsDark, setInternalIsDark] = React.useState(false);
   const actualIsDark = isDark !== undefined ? isDark : internalIsDark;
   const handleChange = onChange || setInternalIsDark;
