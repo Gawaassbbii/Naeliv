@@ -1594,24 +1594,45 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
         </div>
 
         <div className="prose max-w-none">
-          {email.body_html ? (
-            <div 
-              className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300"
-              dangerouslySetInnerHTML={{ __html: email.body_html }}
-            />
-          ) : email.body ? (
-            <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-              {email.body}
-            </p>
-          ) : email.preview ? (
-            <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-              {email.preview}
-            </p>
-          ) : (
-            <p className="text-[16px] leading-relaxed text-gray-500 dark:text-gray-400 italic">
-              Aucun contenu disponible
-            </p>
-          )}
+          {(() => {
+            // Debug: Log email content when displaying
+            console.log('📧 [EMAIL VIEWER] Displaying email content:', {
+              id: email.id,
+              subject: email.subject,
+              hasBody: !!email.body,
+              hasBodyHtml: !!email.body_html,
+              hasPreview: !!email.preview,
+              bodyPreview: email.body?.substring(0, 50) || 'N/A',
+              bodyHtmlPreview: email.body_html?.substring(0, 50) || 'N/A',
+            });
+            
+            if (email.body_html) {
+              return (
+                <div 
+                  className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300"
+                  dangerouslySetInnerHTML={{ __html: email.body_html }}
+                />
+              );
+            } else if (email.body) {
+              return (
+                <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {email.body}
+                </p>
+              );
+            } else if (email.preview) {
+              return (
+                <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                  {email.preview}
+                </p>
+              );
+            } else {
+              return (
+                <p className="text-[16px] leading-relaxed text-gray-500 dark:text-gray-400 italic">
+                  Aucun contenu disponible
+                </p>
+              );
+            }
+          })()}
         </div>
 
         {/* Zone de composition pour Répondre */}
