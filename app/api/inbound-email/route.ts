@@ -213,17 +213,19 @@ export async function POST(request: NextRequest) {
     if ((!emailData.textBody && !emailData.htmlBody) && emailData.emailId && resend) {
       try {
         console.log('📧 [INBOUND EMAIL] Récupération du contenu via API Resend pour email_id:', emailData.emailId);
-        const emailContent = await resend.emails.get(emailData.emailId);
+        const emailContentResponse = await resend.emails.get(emailData.emailId);
         
-        if (emailContent && !emailContent.error) {
+        if (emailContentResponse && !emailContentResponse.error && emailContentResponse.data) {
           console.log('✅ [INBOUND EMAIL] Contenu récupéré via API Resend');
+          const emailContent = emailContentResponse.data;
           // Mettre à jour les données avec le contenu récupéré
-          emailData.textBody = emailContent.text || emailData.textBody || '';
-          emailData.htmlBody = emailContent.html || emailData.htmlBody || '';
+          // Note: L'API Resend pour les emails entrants peut avoir une structure différente
+          emailData.textBody = (emailContent as any).text || emailData.textBody || '';
+          emailData.htmlBody = (emailContent as any).html || emailData.htmlBody || '';
           // Mettre à jour le preview
           emailData.preview = emailData.textBody.substring(0, 100) || emailData.htmlBody.replace(/<[^>]*>/g, '').substring(0, 100) || 'Pas de contenu';
         } else {
-          console.warn('⚠️ [INBOUND EMAIL] Impossible de récupérer le contenu via API Resend:', emailContent?.error);
+          console.warn('⚠️ [INBOUND EMAIL] Impossible de récupérer le contenu via API Resend:', emailContentResponse?.error);
         }
       } catch (error: any) {
         console.error('❌ [INBOUND EMAIL] Erreur lors de la récupération du contenu via API Resend:', error);
