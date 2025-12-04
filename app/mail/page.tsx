@@ -2713,6 +2713,7 @@ function NotificationCard({ title, description, enabled, onToggle }: Notificatio
             backgroundColor: enabled ? '#000000' : '#d1d5db',
           }}
           transition={{ duration: 0.3, ease: 'easeInOut' }}
+          style={{ backgroundColor: enabled ? '#000000' : '#d1d5db' }}
         >
           <motion.span
             className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
@@ -2720,6 +2721,7 @@ function NotificationCard({ title, description, enabled, onToggle }: Notificatio
               left: '2px',
               top: '2px',
               border: '1px solid',
+              borderColor: enabled ? '#000000' : '#d1d5db',
             }}
             animate={{ 
               x: enabled ? 22 : 0,
