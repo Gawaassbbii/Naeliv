@@ -1606,36 +1606,45 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
         <div className="prose max-w-none">
           {(() => {
             // Debug: Log email content when displaying
+            const bodyHtml = email.body_html;
+            const body = email.body;
+            const preview = email.preview;
+            
             console.log('📧 [EMAIL VIEWER] Displaying email content:', {
               id: email.id,
               subject: email.subject,
-              hasBody: !!email.body,
-              hasBodyHtml: !!email.body_html,
-              hasPreview: !!email.preview,
-              bodyPreview: email.body?.substring(0, 50) || 'N/A',
-              bodyHtmlPreview: email.body_html?.substring(0, 50) || 'N/A',
+              hasBody: !!body,
+              hasBodyHtml: !!bodyHtml,
+              hasPreview: !!preview,
+              bodyValue: body,
+              bodyHtmlValue: bodyHtml,
+              previewValue: preview,
             });
             
-            if (email.body_html) {
+            if (bodyHtml) {
+              console.log('✅ [EMAIL VIEWER] Using body_html:', bodyHtml.substring(0, 100));
               return (
                 <div 
                   className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300"
-                  dangerouslySetInnerHTML={{ __html: email.body_html }}
+                  dangerouslySetInnerHTML={{ __html: bodyHtml }}
                 />
               );
-            } else if (email.body) {
+            } else if (body) {
+              console.log('✅ [EMAIL VIEWER] Using body:', body.substring(0, 100));
               return (
                 <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                  {email.body}
+                  {body}
                 </p>
               );
-            } else if (email.preview) {
+            } else if (preview) {
+              console.log('✅ [EMAIL VIEWER] Using preview:', preview.substring(0, 100));
               return (
                 <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                  {email.preview}
+                  {preview}
                 </p>
               );
             } else {
+              console.log('❌ [EMAIL VIEWER] No content available');
               return (
                 <p className="text-[16px] leading-relaxed text-gray-500 dark:text-gray-400 italic">
                   Aucun contenu disponible
