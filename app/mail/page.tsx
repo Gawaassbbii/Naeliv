@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useTheme, ThemeProvider } from '@/app/contexts/ThemeContext';
 import { translations } from '@/app/translations/mail';
+import { Switch } from '@/app/components/ui/switch';
 
 // ============================================================================
 // CONSTANTS
@@ -2086,41 +2087,15 @@ function SettingsPanel({
                             <Icon size={18} className="text-gray-600 dark:text-gray-400" />
                             <span className="text-[14px] text-gray-700 dark:text-gray-300">{label}</span>
                           </div>
-                          <motion.button
-                            onClick={() => {
+                          <Switch
+                            checked={countVisibility[key]}
+                            onChange={(checked) => {
                               setCountVisibility(prev => ({
                                 ...prev,
-                                [key]: !prev[key],
+                                [key]: checked,
                               }));
                             }}
-                            className="relative inline-flex h-6 w-11 items-center rounded-full"
-                            whileTap={{ scale: 0.95 }}
-                            animate={{
-                              backgroundColor: countVisibility[key] ? '#000000' : '#d1d5db',
-                            }}
-                            transition={{ duration: 0.3, ease: 'easeInOut' }}
-                            style={{ backgroundColor: countVisibility[key] ? '#000000' : '#d1d5db' }}
-                          >
-                            <motion.span
-                              className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
-                              style={{
-                                left: '2px',
-                                top: '2px',
-                                border: '1px solid',
-                                borderColor: countVisibility[key] ? '#000000' : '#d1d5db',
-                              }}
-                              animate={{ 
-                                x: countVisibility[key] ? 22 : 0,
-                                borderColor: countVisibility[key] ? '#000000' : '#d1d5db',
-                              }}
-                              transition={{ 
-                                type: "spring", 
-                                stiffness: 500, 
-                                damping: 30,
-                                mass: 0.5
-                              }}
-                            />
-                          </motion.button>
+                          />
                         </div>
                       ))}
                     </div>
@@ -2652,39 +2627,12 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
             {additionalSettings}
           </div>
         </div>
-        <motion.button
-          onClick={disabled ? undefined : onToggle}
+        <Switch
+          checked={enabled}
+          onChange={onToggle}
           disabled={disabled}
-          className={`relative w-11 h-6 rounded-full flex-shrink-0 ml-4 ${
-            disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
-          }`}
-          whileTap={disabled ? {} : { scale: 0.95 }}
-          animate={{
-            backgroundColor: enabled ? '#000000' : '#d1d5db',
-          }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
-          style={{ backgroundColor: enabled ? '#000000' : '#d1d5db' }}
-        >
-          <motion.span
-            className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
-            style={{
-              left: '2px',
-              top: '2px',
-              border: '1px solid',
-              borderColor: enabled ? '#000000' : '#d1d5db',
-            }}
-            animate={{ 
-              x: enabled ? 22 : 0,
-              borderColor: enabled ? '#000000' : '#d1d5db',
-            }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 500, 
-              damping: 30,
-              mass: 0.5
-            }}
-          />
-        </motion.button>
+          className="ml-4"
+        />
       </div>
     </div>
   );
