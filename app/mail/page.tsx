@@ -299,17 +299,25 @@ function MailPageContent() {
 
     console.log(`📧 [MAIL PAGE] Loaded ${data?.length || 0} emails from Supabase for folder: ${folder}`);
     console.log(`📧 [MAIL PAGE] User ID: ${user.id}`);
-    if (data && data.length > 0) {
+    // Filter replied emails client-side if needed (fallback for 'replied' folder)
+    let filteredData = data || [];
+    if (folder === 'replied' && filteredData.length > 0) {
+      filteredData = filteredData.filter((email: any) => email.in_reply_to !== null && email.in_reply_to !== undefined);
+    }
+
+    if (filteredData && filteredData.length > 0) {
       console.log(`📧 [MAIL PAGE] First email sample:`, {
-        id: data[0].id,
-        from: data[0].from_email,
-        subject: data[0].subject,
-        archived: data[0].archived,
-        deleted: data[0].deleted,
+        id: filteredData[0].id,
+        from: filteredData[0].from_email,
+        subject: filteredData[0].subject,
+        archived: filteredData[0].archived,
+        deleted: filteredData[0].deleted,
+        folder: filteredData[0].folder,
+        in_reply_to: filteredData[0].in_reply_to,
       });
     }
 
-    if (data && data.length > 0) {
+    if (filteredData && filteredData.length > 0) {
       // Transform Supabase data to match our email format
       const transformedEmails = filteredData.map((email: any) => ({
         id: email.id,
