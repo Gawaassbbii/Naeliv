@@ -1105,6 +1105,16 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
   const { language } = useTheme();
   const t = translations[language];
   
+  // Valeurs par défaut pour folderCounts si undefined
+  const safeFolderCounts = folderCounts || {
+    inbox: 0,
+    starred: 0,
+    archived: 0,
+    trash: 0,
+    sent: 0,
+    replied: 0,
+  };
+  
   return (
     <aside
       className="w-64 flex-shrink-0 h-full border-r border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col transition-colors overflow-y-auto overflow-x-hidden"
@@ -1152,42 +1162,42 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           icon={Inbox} 
           label={t.inbox} 
           active={activeFolder === 'inbox'} 
-          count={countVisibility.inbox ? folderCounts.inbox : undefined}
+          count={countVisibility?.inbox ? safeFolderCounts.inbox : undefined}
           onClick={() => setActiveFolder('inbox')}
         />
         <NavItem 
           icon={Star} 
           label={t.starred} 
           active={activeFolder === 'starred'}
-          count={countVisibility.starred ? folderCounts.starred : undefined}
+          count={countVisibility?.starred ? safeFolderCounts.starred : undefined}
           onClick={() => setActiveFolder('starred')}
         />
         <NavItem 
           icon={Send} 
           label={t.sent}
           active={activeFolder === 'sent'}
-          count={countVisibility.sent ? folderCounts.sent : undefined}
+          count={countVisibility?.sent ? safeFolderCounts.sent : undefined}
           onClick={() => setActiveFolder('sent')}
         />
         <NavItem 
           icon={Reply} 
           label={t.replied} 
           active={activeFolder === 'replied'}
-          count={countVisibility.replied ? folderCounts.replied : undefined}
+          count={countVisibility?.replied ? safeFolderCounts.replied : undefined}
           onClick={() => setActiveFolder('replied')}
         />
         <NavItem 
           icon={Archive} 
           label={t.archived} 
           active={activeFolder === 'archived'}
-          count={countVisibility.archived ? folderCounts.archived : undefined}
+          count={countVisibility?.archived ? safeFolderCounts.archived : undefined}
           onClick={() => setActiveFolder('archived')}
         />
         <NavItem 
           icon={Trash2} 
           label={t.trash} 
           active={activeFolder === 'trash'}
-          count={countVisibility.trash ? folderCounts.trash : undefined}
+          count={countVisibility?.trash ? safeFolderCounts.trash : undefined}
           onClick={() => setActiveFolder('trash')}
         />
 
