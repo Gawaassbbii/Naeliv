@@ -339,29 +339,65 @@ function MailPageContent() {
 
     if (filteredData && filteredData.length > 0) {
       // Transform Supabase data to match our email format
-      const transformedEmails = filteredData.map((email: any) => ({
-        id: email.id,
-        from: email.from_name || email.from_email,
-        subject: email.subject,
-        preview: email.preview || email.body?.substring(0, 100) || '',
-        time: new Date(email.received_at || email.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-        date: formatDate(new Date(email.received_at || email.created_at)),
-        daysAgo: Math.floor((Date.now() - new Date(email.received_at || email.created_at).getTime()) / (1000 * 60 * 60 * 24)),
-        read: !!email.read_at, // IMPORTANT: Utiliser read_at pour déterminer si l'email est lu
-        starred: email.starred || false,
-        archived: email.archived || false,
-        deleted: email.deleted || false,
-        hasPaidStamp: email.has_paid_stamp || false,
-        dbId: email.id, // Store Supabase ID for updates
-        folder: email.folder || 'inbox', // Store folder
-        in_reply_to: email.in_reply_to || null, // Store in_reply_to for filtering
-        message_id: email.message_id || null, // Store message_id
-        received_at: email.received_at || email.created_at, // Store received_at or created_at
-        // Map body from Supabase columns (body is the primary column, text_content is fallback)
-        body: email.body !== null && email.body !== undefined ? email.body : (email.text_content || null),
-        // Map body_html from Supabase columns (body_html is the primary column, html_content is fallback)
-        body_html: email.body_html !== null && email.body_html !== undefined ? email.body_html : (email.html_content || null),
-      }));
+      const transformedEmails = filteredData.map((email: any) => {
+        // Debug: Log raw email data before transformation
+        console.log('📧 [TRANSFORM] Raw email before transformation:', {
+          id: email.id,
+          subject: email.subject,
+          body: email.body,
+          body_html: email.body_html,
+          text_content: email.text_content,
+          html_content: email.html_content,
+        });
+        
+        // Map body: try body first, then text_content, then null
+        const body = (email.body !== null && email.body !== undefined && email.body !== '') 
+          ? email.body 
+          : ((email.text_content !== null && email.text_content !== undefined && email.text_content !== '') 
+              ? email.text_content 
+              : null);
+        
+        // Map body_html: try body_html first, then html_content, then null
+        const body_html = (email.body_html !== null && email.body_html !== undefined && email.body_html !== '') 
+          ? email.body_html 
+          : ((email.html_content !== null && email.html_content !== undefined && email.html_content !== '') 
+              ? email.html_content 
+              : null);
+        
+        const transformed = {
+          id: email.id,
+          from: email.from_name || email.from_email,
+          subject: email.subject,
+          preview: email.preview || body?.substring(0, 100) || '',
+          time: new Date(email.received_at || email.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          date: formatDate(new Date(email.received_at || email.created_at)),
+          daysAgo: Math.floor((Date.now() - new Date(email.received_at || email.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+          read: !!email.read_at, // IMPORTANT: Utiliser read_at pour déterminer si l'email est lu
+          starred: email.starred || false,
+          archived: email.archived || false,
+          deleted: email.deleted || false,
+          hasPaidStamp: email.has_paid_stamp || false,
+          dbId: email.id, // Store Supabase ID for updates
+          folder: email.folder || 'inbox', // Store folder
+          in_reply_to: email.in_reply_to || null, // Store in_reply_to for filtering
+          message_id: email.message_id || null, // Store message_id
+          received_at: email.received_at || email.created_at, // Store received_at or created_at
+          body: body, // Store body content
+          body_html: body_html, // Store HTML content
+        };
+        
+        // Debug: Log transformed email
+        console.log('📧 [TRANSFORM] Transformed email:', {
+          id: transformed.id,
+          subject: transformed.subject,
+          hasBody: !!transformed.body,
+          hasBodyHtml: !!transformed.body_html,
+          bodyValue: transformed.body,
+          bodyHtmlValue: transformed.body_html,
+        });
+        
+        return transformed;
+      });
       
       // Debug: Log first email to check content
       if (transformedEmails.length > 0) {
