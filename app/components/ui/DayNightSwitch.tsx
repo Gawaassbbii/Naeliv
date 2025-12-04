@@ -42,9 +42,9 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
         }}
       />
 
-      {/* Petits ronds qui bougent dans la pillule */}
+      {/* Petits ronds qui bougent dans la pillule (derrière la boule principale) */}
       <motion.div
-        className="absolute w-1.5 h-1.5 rounded-full bg-white/40"
+        className="absolute w-1.5 h-1.5 rounded-full bg-white/40 z-5"
         style={{ left: '8px', top: '50%', transform: 'translateY(-50%)' }}
         animate={{
           x: checked ? [8, 24, 8] : [8, 4, 8],
@@ -58,7 +58,7 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
         }}
       />
       <motion.div
-        className="absolute w-1 h-1 rounded-full bg-white/30"
+        className="absolute w-1 h-1 rounded-full bg-white/30 z-5"
         style={{ left: '12px', top: '30%' }}
         animate={{
           x: checked ? [12, 28, 12] : [12, 6, 12],
@@ -73,7 +73,7 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
         }}
       />
       <motion.div
-        className="absolute w-1 h-1 rounded-full bg-white/35"
+        className="absolute w-1 h-1 rounded-full bg-white/35 z-5"
         style={{ left: '10px', top: '70%' }}
         animate={{
           x: checked ? [10, 26, 10] : [10, 5, 10],
@@ -88,13 +88,30 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
         }}
       />
 
-      {/* Boule principale qui se déplace */}
+      {/* Effet de vague liquide (en arrière-plan) */}
+      <motion.div
+        className="absolute inset-0 rounded-full z-0"
+        style={{
+          background: checked
+            ? 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%)'
+            : 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.03) 50%, transparent 100%)',
+        }}
+        animate={{
+          x: checked ? ['-100%', '100%'] : ['100%', '-100%'],
+        }}
+        transition={{
+          duration: 1.5,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+      />
+
+      {/* Boule principale blanche qui se déplace - TOUJOURS VISIBLE */}
       <motion.span
-        className="absolute h-5 w-5 rounded-full shadow-md z-10"
+        className="absolute h-5 w-5 rounded-full bg-white shadow-lg z-20"
         style={{
           left: '2px',
           top: '2px',
-          backgroundColor: '#f9fafb',
         }}
         animate={{ 
           x: checked ? 20 : 2,
@@ -106,14 +123,14 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
           mass: 0.5
         }}
       >
-        {/* Reflet sur la boule */}
+        {/* Reflet subtil sur la boule */}
         <motion.div
-          className="absolute inset-0 rounded-full"
+          className="absolute inset-0 rounded-full pointer-events-none"
           style={{
-            background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6) 0%, transparent 60%)',
+            background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8) 0%, transparent 60%)',
           }}
           animate={{
-            opacity: checked ? [0.6, 0.8, 0.6] : [0.5, 0.7, 0.5],
+            opacity: checked ? [0.7, 0.9, 0.7] : [0.6, 0.8, 0.6],
           }}
           transition={{
             duration: 2,
@@ -122,24 +139,6 @@ export default function DayNightSwitch({ checked, onChange }: DayNightSwitchProp
           }}
         />
       </motion.span>
-
-      {/* Effet de vague liquide */}
-      <motion.div
-        className="absolute inset-0 rounded-full"
-        style={{
-          background: checked
-            ? 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%)'
-            : 'linear-gradient(90deg, transparent 0%, rgba(0,0,0,0.05) 50%, transparent 100%)',
-        }}
-        animate={{
-          x: checked ? ['-100%', '100%'] : ['100%', '-100%'],
-        }}
-        transition={{
-          duration: 1.5,
-          repeat: Infinity,
-          ease: "linear"
-        }}
-      />
     </motion.div>
   );
 }
