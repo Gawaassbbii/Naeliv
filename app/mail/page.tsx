@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply } from 'lucide-react';
+import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -1828,6 +1828,8 @@ interface SettingsPanelProps {
   language: 'fr' | 'nl' | 'de' | 'en';
   setTheme: (theme: 'light' | 'dark') => void;
   setLanguage: (language: 'fr' | 'nl' | 'de' | 'en') => void;
+  countVisibility: Record<string, boolean>;
+  setCountVisibility: (visibility: Record<string, boolean>) => void;
 }
 
 function SettingsPanel({ 
@@ -1838,7 +1840,9 @@ function SettingsPanel({
   theme,
   language,
   setTheme,
-  setLanguage
+  setLanguage,
+  countVisibility,
+  setCountVisibility,
 }: SettingsPanelProps) {
   const [notifications, setNotifications] = useState(true);
   const [premiumShield, setPremiumShield] = useState(true);
