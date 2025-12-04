@@ -2108,12 +2108,18 @@ function SettingsPanel({
                               }}
                               animate={{ 
                                 x: countVisibility[key] ? 22 : 0,
+                                borderColor: countVisibility[key] ? '#000000' : '#d1d5db',
                               }}
                               transition={{ 
                                 type: "spring", 
                                 stiffness: 500, 
                                 damping: 30,
                                 mass: 0.5
+                              }}
+                              style={{
+                                left: '2px',
+                                top: '2px',
+                                border: '1px solid',
                               }}
                             />
                           </motion.button>
@@ -2665,9 +2671,11 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
             style={{
               left: '2px',
               top: '2px',
+              border: '1px solid',
             }}
             animate={{ 
               x: enabled ? 22 : 0,
+              borderColor: enabled ? '#000000' : '#d1d5db',
             }}
             transition={{ 
               type: "spring", 
@@ -2711,9 +2719,11 @@ function NotificationCard({ title, description, enabled, onToggle }: Notificatio
             style={{
               left: '2px',
               top: '2px',
+              border: '1px solid',
             }}
             animate={{ 
               x: enabled ? 22 : 0,
+              borderColor: enabled ? '#000000' : '#d1d5db',
             }}
             transition={{ 
               type: "spring", 
