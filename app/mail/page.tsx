@@ -853,10 +853,13 @@ function MailPageContent() {
           <EmailViewer 
             email={selectedEmail !== null ? getFilteredEmails()[selectedEmail] : null}
             emailIndex={selectedEmail}
+            activeFolder={activeFolder}
             onArchive={handleArchive}
             onDelete={handleDelete}
             onReply={handleReply}
             onForward={handleForward}
+            loadEmails={loadEmails}
+            loadFolderCounts={loadFolderCounts}
           />
         </div>
       </div>
@@ -2093,7 +2096,7 @@ function SettingsPanel({
                           <Switch
                             checked={countVisibility[key]}
                             onChange={(checked) => {
-                              setCountVisibility(prev => ({
+                              setCountVisibility((prev: Record<string, boolean>) => ({
                                 ...prev,
                                 [key]: checked,
                               }));
