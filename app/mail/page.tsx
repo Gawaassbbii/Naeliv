@@ -274,11 +274,13 @@ function MailPageContent() {
         break;
       case 'sent':
         // For sent emails, filter by folder='sent' and no in_reply_to (not replies)
+        // Note: folder column must exist in Supabase (run add_email_sending_columns.sql)
         query = query.eq('folder', 'sent').eq('deleted', false).is('in_reply_to', null);
         break;
       case 'replied':
         // For replied emails, filter by folder='sent' and has in_reply_to (is a reply)
         // We'll filter client-side since Supabase .not('is', null) syntax is tricky
+        // Note: folder column must exist in Supabase (run add_email_sending_columns.sql)
         query = query.eq('folder', 'sent').eq('deleted', false);
         break;
       default:

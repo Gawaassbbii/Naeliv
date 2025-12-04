@@ -163,16 +163,20 @@ export async function POST(request: NextRequest) {
     // 10. Sauvegarder l'email dans Supabase (dossier "sent")
     const emailRecord = {
       user_id: user.id,
-      from: fromEmail,
-      to: Array.isArray(to) ? to : [to],
+      from_email: fromEmail, // Utiliser from_email au lieu de from
+      from_name: firstName, // Ajouter le nom
+      to_email: Array.isArray(to) ? to : [to], // Utiliser to_email (array)
       subject: subject,
-      text: text || null,
-      html: html || null,
+      body: text || null, // Utiliser body au lieu de text
+      body_html: html || null, // Utiliser body_html au lieu de html
+      text_content: text || null, // Garder aussi text_content pour compatibilité
+      html_content: html || null, // Garder aussi html_content pour compatibilité
       folder: 'sent',
       message_id: emailData?.id || `sent-${Date.now()}`,
       in_reply_to: inReplyTo || null,
       references: references || inReplyTo || null,
       created_at: new Date().toISOString(),
+      received_at: new Date().toISOString(), // Utiliser received_at pour la date
     };
 
     const { error: insertError } = await supabaseAdmin
