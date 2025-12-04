@@ -1435,10 +1435,13 @@ function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoadi
 interface EmailViewerProps {
   email: any;
   emailIndex?: number | null;
+  activeFolder: 'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied';
   onArchive: (index: number) => void;
   onDelete: (index: number) => void;
   onReply: (email: any) => void;
   onForward: (email: any) => void;
+  loadEmails: (folder: 'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied') => void;
+  loadFolderCounts: () => void;
 }
 
 function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForward, loadEmails, loadFolderCounts }: EmailViewerProps) {
