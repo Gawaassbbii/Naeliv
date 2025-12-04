@@ -254,7 +254,9 @@ export async function POST(request: NextRequest) {
     };
 
     // 12. Trouver l'utilisateur par son adresse email
-    const { data: profile, error: profileError } = await supabase
+    // IMPORTANT: Utiliser supabaseAdmin pour contourner RLS
+    const clientToUse = supabaseAdmin || supabase;
+    const { data: profile, error: profileError } = await clientToUse
       .from('profiles')
       .select('id, email, plan')
       .eq('email', sanitizedData.to)
@@ -263,6 +265,18 @@ export async function POST(request: NextRequest) {
     if (profileError || !profile) {
       console.error('❌ [INBOUND EMAIL] User not found for email:', sanitizedData.to);
       console.error('❌ [INBOUND EMAIL] Profile error:', profileError);
+      console.error('❌ [INBOUND EMAIL] Using admin client:', !!supabaseAdmin);
+      
+      // Vérifier si l'utilisateur existe dans auth.users (peut-être que le profil n'a pas été créé)
+      if (supabaseAdmin) {
+        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+        const userExists = authUsers?.users?.find((u: any) => u.email === sanitizedData.to);
+        console.log('❌ [INBOUND EMAIL] User in auth.users:', userExists ? 'EXISTS' : 'NOT FOUND');
+        if (userExists && !authError) {
+          console.log('⚠️ [INBOUND EMAIL] User exists in auth.users but not in profiles table!');
+        }
+      }
+      
       // Ne pas révéler que l'utilisateur n'existe pas (sécurité)
       // Mais on logue pour le débogage
       return NextResponse.json(
