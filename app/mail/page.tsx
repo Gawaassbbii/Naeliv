@@ -326,6 +326,14 @@ function MailPageContent() {
         bodyHtmlValue: filteredData[0].body_html,
         previewValue: filteredData[0].preview,
         allKeys: Object.keys(filteredData[0]),
+        // Check all possible column names
+        bodyDirect: filteredData[0].body,
+        textContent: filteredData[0].text_content,
+        text: filteredData[0].text,
+        bodyHtmlDirect: filteredData[0].body_html,
+        htmlContent: filteredData[0].html_content,
+        html: filteredData[0].html,
+        fullObject: filteredData[0],
       });
     }
 
