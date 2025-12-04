@@ -317,6 +317,16 @@ function MailPageContent() {
         folder: filteredData[0].folder,
         in_reply_to: filteredData[0].in_reply_to,
       });
+      // Debug: Check if body/body_html exist in raw data
+      console.log('📧 [MAIL PAGE] Raw email body check:', {
+        hasBody: !!filteredData[0].body,
+        hasBodyHtml: !!filteredData[0].body_html,
+        hasPreview: !!filteredData[0].preview,
+        bodyValue: filteredData[0].body,
+        bodyHtmlValue: filteredData[0].body_html,
+        previewValue: filteredData[0].preview,
+        allKeys: Object.keys(filteredData[0]),
+      });
     }
 
     if (filteredData && filteredData.length > 0) {
