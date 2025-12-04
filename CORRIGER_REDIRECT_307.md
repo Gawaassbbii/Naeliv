@@ -77,3 +77,4 @@ Vérifiez les logs Vercel pour voir :
 2. S'il y a des erreurs dans le traitement
 3. Si les variables d'environnement sont bien configurées
 
+

@@ -99,3 +99,4 @@ Partagez-moi :
 2. Les variables d'environnement configurées dans Vercel (sans les valeurs sensibles, juste les noms)
 3. Si le build Vercel a réussi (Vercel > Deployments > Dernier déploiement)
 
+

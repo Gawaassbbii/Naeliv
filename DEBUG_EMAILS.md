@@ -107,3 +107,4 @@ Partagez-moi :
 2. Le résultat de la requête SQL pour vérifier l'utilisateur
 3. Les erreurs dans la console du navigateur (F12)
 
+

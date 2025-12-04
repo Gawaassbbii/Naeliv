@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Vérifier si la maintenance est activée via variable d'environnement
   const maintenanceMode = process.env.MAINTENANCE_MODE === 'true';
 

@@ -95,3 +95,4 @@ L'email ne peut pas être inséré si `test2@naeliv.com` n'existe pas dans Supab
 - [ ] L'utilisateur `test2@naeliv.com` existe dans Supabase
 - [ ] Le webhook est "Enabled" dans Resend
 
+

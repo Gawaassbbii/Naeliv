@@ -55,3 +55,4 @@ Après avoir créé l'utilisateur :
 3. Vérifiez les logs Vercel pour voir si l'email est inséré
 4. Vérifiez dans `/mail` si l'email apparaît
 
+

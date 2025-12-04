@@ -35,3 +35,4 @@
 - **Les emails continueront de fonctionner** : Les webhooks Resend ne dépendent pas du domaine Vercel
 - **Pour réactiver** : Il suffit de rajouter le domaine dans Vercel et de reconfigurer le DNS
 
+

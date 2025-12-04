@@ -42,3 +42,4 @@ Le fichier `.env.local` est **UNIQUEMENT pour le développement local**.
 - [ ] `WEBHOOK_SECRET` est correct (whsec_1okDSlt2vHmmmZrSaHviDk3vX9kQgtei)
 - [ ] Pour Vercel, j'ai ajouté toutes les variables dans Vercel Dashboard
 
+

@@ -71,3 +71,4 @@ Environnements: ✅ Production, ✅ Preview, ✅ Development
 - **API Key** : Resend Dashboard > API Keys
 - **Webhook Secret** : Resend Dashboard > Domains > naeliv.com > Webhooks > Secret
 
+

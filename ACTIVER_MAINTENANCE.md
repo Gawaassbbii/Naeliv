@@ -10,9 +10,13 @@ Le middleware redirige automatiquement tous les visiteurs vers `/maintenance` si
 2. Ajoutez une nouvelle variable :
    - **Name** : `MAINTENANCE_MODE`
    - **Value** : `true`
-   - **Environment** : Production (et Preview si vous voulez)
+   - **Environment** : 
+     - **Option A** : Sélectionnez seulement **Production** (recommandé) → La maintenance s'affichera uniquement sur `naeliv.com`
+     - **Option B** : Sélectionnez **Production + Preview + Development** → La maintenance s'affichera partout (production, preview, et local)
 3. Cliquez sur **Save**
 4. **Redéployez** le projet (ou attendez le prochain déploiement)
+
+**Note** : Pour les autres variables d'environnement (Supabase, Resend, etc.), c'est **correct** d'avoir les 3 environnements sélectionnés. Cela permet d'utiliser les mêmes valeurs en production, preview et développement.
 
 ### Désactiver la maintenance
 
@@ -26,6 +30,7 @@ Le middleware redirige automatiquement tous les visiteurs vers `/maintenance` si
 - **Les webhooks continuent de fonctionner** : Les routes `/api/*` ne sont pas redirigées
 - **Les emails continueront d'être reçus** : L'API `/api/inbound-email` reste accessible
 - **Pour tester localement** : Ajoutez `MAINTENANCE_MODE=true` dans votre `.env.local`
+- **Si vous avez sélectionné les 3 environnements** : La maintenance sera aussi active en preview et en développement local
 
 ## Option 2 : Retirer le domaine dans Vercel
 

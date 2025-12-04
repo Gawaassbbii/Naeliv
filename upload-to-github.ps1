@@ -77,3 +77,4 @@ Remove-Item $tempZip -ErrorAction SilentlyContinue
 Write-Host "📝 Archive temporaire créée à : $tempZip" -ForegroundColor Yellow
 Write-Host "   (Vous pouvez l'utiliser pour upload manuel si besoin)" -ForegroundColor Gray
 
+
