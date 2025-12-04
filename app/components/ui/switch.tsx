@@ -18,24 +18,22 @@ export function Switch({ checked, onChange, disabled = false, className = "" }: 
       aria-checked={checked}
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       whileTap={disabled ? {} : { scale: 0.95 }}
       animate={{
-        backgroundColor: checked ? '#000000' : '#d1d5db', // noir : gris
+        backgroundColor: checked ? '#000000' : '#e5e7eb', // noir : gray-200 (gris plus clair)
       }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      style={{ backgroundColor: checked ? '#000000' : '#d1d5db' }}
+      style={{ backgroundColor: checked ? '#000000' : '#e5e7eb' }}
     >
       <motion.span
-        className="absolute h-5 w-5 rounded-full bg-white shadow-lg"
+        className="absolute h-5 w-5 rounded-full bg-white shadow-sm"
         style={{
           left: '2px',
           top: '2px',
-          border: '1px solid',
         }}
         animate={{ 
           x: checked ? 20 : 2, // 20px en ON, 2px en OFF
-          borderColor: checked ? '#000000' : '#9ca3af',
         }}
         transition={{ 
           type: "spring", 
