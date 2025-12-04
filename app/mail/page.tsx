@@ -342,6 +342,20 @@ function MailPageContent() {
         body: email.body || email.text_content || null, // Store body content
         body_html: email.body_html || email.html_content || null, // Store HTML content
       }));
+      
+      // Debug: Log first email to check content
+      if (transformedEmails.length > 0) {
+        console.log('📧 [MAIL PAGE] First email content:', {
+          id: transformedEmails[0].id,
+          subject: transformedEmails[0].subject,
+          hasBody: !!transformedEmails[0].body,
+          hasBodyHtml: !!transformedEmails[0].body_html,
+          hasPreview: !!transformedEmails[0].preview,
+          bodyLength: transformedEmails[0].body?.length || 0,
+          bodyHtmlLength: transformedEmails[0].body_html?.length || 0,
+          previewLength: transformedEmails[0].preview?.length || 0,
+        });
+      }
       setEmails(transformedEmails);
     } else {
       setEmails([]);
