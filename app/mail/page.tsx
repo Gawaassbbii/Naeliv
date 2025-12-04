@@ -339,6 +339,8 @@ function MailPageContent() {
         in_reply_to: email.in_reply_to || null, // Store in_reply_to for filtering
         message_id: email.message_id || null, // Store message_id
         received_at: email.received_at || email.created_at, // Store received_at or created_at
+        body: email.body || email.text_content || null, // Store body content
+        body_html: email.body_html || email.html_content || null, // Store HTML content
       }));
       setEmails(transformedEmails);
     } else {
