@@ -185,8 +185,10 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('⚠️ [SEND EMAIL] Erreur lors de la sauvegarde dans Supabase:', insertError);
+      console.error('⚠️ [SEND EMAIL] Détails de l\'erreur:', JSON.stringify(insertError, null, 2));
+      console.error('⚠️ [SEND EMAIL] Email record:', JSON.stringify(emailRecord, null, 2));
       // On ne retourne pas d'erreur car l'email a été envoyé avec succès
-      // On log juste l'erreur pour le debugging
+      // Mais on log l'erreur pour le debugging
     } else {
       console.log('✅ [SEND EMAIL] Email sauvegardé dans Supabase (dossier sent)');
     }
