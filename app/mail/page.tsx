@@ -2086,7 +2086,7 @@ function SettingsPanel({
                             <Icon size={18} className="text-gray-600 dark:text-gray-400" />
                             <span className="text-[14px] text-gray-700 dark:text-gray-300">{label}</span>
                           </div>
-                          <button
+                          <motion.button
                             onClick={() => {
                               setCountVisibility(prev => ({
                                 ...prev,
@@ -2096,13 +2096,14 @@ function SettingsPanel({
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ease-in-out ${
                               countVisibility[key] ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'
                             }`}
+                            whileTap={{ scale: 0.95 }}
                           >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 ease-in-out ${
-                                countVisibility[key] ? 'translate-x-6' : 'translate-x-1'
-                              }`}
+                            <motion.span
+                              className="inline-block h-4 w-4 rounded-full bg-white"
+                              animate={{ x: countVisibility[key] ? 24 : 4 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }}
                             />
-                          </button>
+                          </motion.button>
                         </div>
                       ))}
                     </div>
