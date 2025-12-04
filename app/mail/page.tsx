@@ -1876,6 +1876,8 @@ interface SettingsPanelProps {
   setLanguage: (language: 'fr' | 'nl' | 'de' | 'en') => void;
   countVisibility: Record<string, boolean>;
   setCountVisibility: (visibility: Record<string, boolean>) => void;
+  user: any;
+  userPlan: 'essential' | 'pro';
 }
 
 function SettingsPanel({ 
