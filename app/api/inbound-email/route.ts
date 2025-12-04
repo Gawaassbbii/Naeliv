@@ -22,6 +22,9 @@ const MAX_EMAIL_SIZE = 25 * 1024 * 1024; // 25MB
 const RATE_LIMIT_MAX = 100; // Max 100 emails par minute par IP
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 
+// Client Resend pour récupérer le contenu des emails
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+
 // Créer un client Supabase avec service role key pour contourner RLS dans l'API
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qmwcvaaviheclxgerdgq.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -178,11 +181,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Extraire les données de l'email
-    const emailData = extractEmailData(body);
+    let emailData = extractEmailData(body);
     console.log('📧 [INBOUND EMAIL] Données extraites:', {
       from: emailData?.fromEmail,
       to: emailData?.to,
       subject: emailData?.subject?.substring(0, 50),
+      hasTextBody: !!emailData?.textBody,
+      hasHtmlBody: !!emailData?.htmlBody,
+      emailId: emailData?.emailId,
     });
     
     if (!emailData) {
@@ -190,6 +196,28 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid email data' },
         { status: 400 }
       );
+    }
+
+    // 6.5. Si le contenu est vide et qu'on a un email_id, récupérer le contenu via l'API Resend
+    if ((!emailData.textBody && !emailData.htmlBody) && emailData.emailId && resend) {
+      try {
+        console.log('📧 [INBOUND EMAIL] Récupération du contenu via API Resend pour email_id:', emailData.emailId);
+        const emailContent = await resend.emails.get(emailData.emailId);
+        
+        if (emailContent && !emailContent.error) {
+          console.log('✅ [INBOUND EMAIL] Contenu récupéré via API Resend');
+          // Mettre à jour les données avec le contenu récupéré
+          emailData.textBody = emailContent.text || emailData.textBody || '';
+          emailData.htmlBody = emailContent.html || emailData.htmlBody || '';
+          // Mettre à jour le preview
+          emailData.preview = emailData.textBody.substring(0, 100) || emailData.htmlBody.replace(/<[^>]*>/g, '').substring(0, 100) || 'Pas de contenu';
+        } else {
+          console.warn('⚠️ [INBOUND EMAIL] Impossible de récupérer le contenu via API Resend:', emailContent?.error);
+        }
+      } catch (error: any) {
+        console.error('❌ [INBOUND EMAIL] Erreur lors de la récupération du contenu via API Resend:', error);
+        // Continuer même si la récupération échoue
+      }
     }
 
     // 7. Validation stricte des emails
