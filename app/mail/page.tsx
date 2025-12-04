@@ -1580,12 +1580,24 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
         </div>
 
         <div className="prose max-w-none">
-          <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-            {email.preview}
-          </p>
-          <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 mt-4">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
-          </p>
+          {email.body_html ? (
+            <div 
+              className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300"
+              dangerouslySetInnerHTML={{ __html: email.body_html }}
+            />
+          ) : email.body ? (
+            <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+              {email.body}
+            </p>
+          ) : email.preview ? (
+            <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+              {email.preview}
+            </p>
+          ) : (
+            <p className="text-[16px] leading-relaxed text-gray-500 dark:text-gray-400 italic">
+              Aucun contenu disponible
+            </p>
+          )}
         </div>
 
         {/* Zone de composition pour Répondre */}
