@@ -1,22 +1,6 @@
-// Import dynamique pour éviter les problèmes avec jsdom en serverless
-let DOMPurify: any = null;
-let dompurifyLoaded = false;
-
-async function loadDOMPurify() {
-  if (dompurifyLoaded) return DOMPurify;
-  
-  try {
-    // Import dynamique pour éviter les erreurs en serverless
-    const dompurifyModule = await import('isomorphic-dompurify');
-    DOMPurify = dompurifyModule.default;
-    dompurifyLoaded = true;
-    return DOMPurify;
-  } catch (error) {
-    console.warn('⚠️ DOMPurify non disponible, utilisation de sanitization basique:', error);
-    dompurifyLoaded = true; // Marquer comme chargé pour éviter de réessayer
-    return null;
-  }
-}
+// ⚠️ IMPORTANT : isomorphic-dompurify utilise jsdom qui ne fonctionne pas en serverless Vercel
+// Nous utilisons une sanitization basique côté serveur
+// La sanitization complète avec DOMPurify se fera côté client si nécessaire
 
 /**
  * Configuration de sécurité pour la sanitization des emails HTML
@@ -75,25 +59,19 @@ function basicSanitize(html: string): string {
  * Nettoie le HTML d'un email pour éviter les attaques XSS
  * ⚠️ CRITIQUE : Utilisez cette fonction AVANT d'afficher tout HTML provenant d'emails externes
  * 
+ * Note: En serverless (Vercel), nous utilisons une sanitization basique.
+ * La sanitization complète avec DOMPurify se fera côté client.
+ * 
  * @param html - Le HTML brut de l'email
  * @returns Le HTML nettoyé et sécurisé
  */
-export async function sanitizeEmailHTML(html: string | null | undefined): Promise<string> {
+export function sanitizeEmailHTML(html: string | null | undefined): string {
   if (!html || typeof html !== 'string') {
     return '';
   }
   
-  // Essayer de charger DOMPurify
-  const dompurify = await loadDOMPurify();
-  
-  let cleanHTML: string;
-  if (dompurify) {
-    // Utiliser DOMPurify si disponible
-    cleanHTML = dompurify.sanitize(html, SANITIZE_CONFIG);
-  } else {
-    // Fallback : sanitization basique
-    cleanHTML = basicSanitize(html);
-  }
+  // Sanitization basique pour serverless (sans jsdom)
+  const cleanHTML = basicSanitize(html);
   
   // Post-traitement : forcer les liens externes à s'ouvrir dans un nouvel onglet avec sécurité
   const withSecureLinks = cleanHTML.replace(
@@ -150,13 +128,13 @@ export function extractTextFromHTML(html: string | null | undefined): string {
 /**
  * Génère un preview sécurisé d'un email
  */
-export async function generateEmailPreview(
+export function generateEmailPreview(
   html: string | null | undefined,
   text: string | null | undefined,
   maxLength: number = 100
-): Promise<string> {
+): string {
   // Préférer le texte brut s'il existe
-  const source = text || await extractTextFromHTML(html);
+  const source = text || extractTextFromHTML(html);
   
   if (!source) {
     return '';
