@@ -171,6 +171,8 @@ export async function POST(request: NextRequest) {
         type: body.type,
         hasData: !!body.data,
         keys: Object.keys(body),
+        dataKeys: body.data ? Object.keys(body.data) : [],
+        fullBody: JSON.stringify(body, null, 2).substring(0, 2000), // Log first 2000 chars
       });
     } catch (error) {
       console.error('📧 [INBOUND EMAIL] Erreur parsing JSON:', error);
