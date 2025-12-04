@@ -1897,6 +1897,8 @@ function SettingsPanel({
   setLanguage,
   countVisibility,
   setCountVisibility,
+  user,
+  userPlan,
 }: SettingsPanelProps) {
   const [notifications, setNotifications] = useState(true);
   const [premiumShield, setPremiumShield] = useState(true);
