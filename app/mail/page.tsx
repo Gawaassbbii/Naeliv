@@ -299,8 +299,6 @@ function MailPageContent() {
       return;
     }
 
-    console.log(`📧 [MAIL PAGE] Loaded ${data?.length || 0} emails from Supabase for folder: ${folder}`);
-    console.log(`📧 [MAIL PAGE] User ID: ${user.id}`);
     // Filter replied emails client-side if needed (fallback for 'replied' folder)
     let filteredData = data || [];
     if (folder === 'replied' && filteredData.length > 0) {
@@ -308,48 +306,8 @@ function MailPageContent() {
     }
 
     if (filteredData && filteredData.length > 0) {
-      console.log(`📧 [MAIL PAGE] First email sample:`, {
-        id: filteredData[0].id,
-        from: filteredData[0].from_email,
-        subject: filteredData[0].subject,
-        archived: filteredData[0].archived,
-        deleted: filteredData[0].deleted,
-        folder: filteredData[0].folder,
-        in_reply_to: filteredData[0].in_reply_to,
-      });
-      // Debug: Check if body/body_html exist in raw data
-      console.log('📧 [MAIL PAGE] Raw email body check:', {
-        hasBody: !!filteredData[0].body,
-        hasBodyHtml: !!filteredData[0].body_html,
-        hasPreview: !!filteredData[0].preview,
-        bodyValue: filteredData[0].body,
-        bodyHtmlValue: filteredData[0].body_html,
-        previewValue: filteredData[0].preview,
-        allKeys: Object.keys(filteredData[0]),
-        // Check all possible column names
-        bodyDirect: filteredData[0].body,
-        textContent: filteredData[0].text_content,
-        text: filteredData[0].text,
-        bodyHtmlDirect: filteredData[0].body_html,
-        htmlContent: filteredData[0].html_content,
-        html: filteredData[0].html,
-        fullObject: filteredData[0],
-      });
-    }
-
-    if (filteredData && filteredData.length > 0) {
       // Transform Supabase data to match our email format
       const transformedEmails = filteredData.map((email: any) => {
-        // Debug: Log raw email data before transformation
-        console.log('📧 [TRANSFORM] Raw email before transformation:', {
-          id: email.id,
-          subject: email.subject,
-          body: email.body,
-          body_html: email.body_html,
-          text_content: email.text_content,
-          html_content: email.html_content,
-        });
-        
         // Map body: try body first, then text_content, then null
         const body = (email.body !== null && email.body !== undefined && email.body !== '') 
           ? email.body 
@@ -364,7 +322,7 @@ function MailPageContent() {
               ? email.html_content 
               : null);
         
-        const transformed = {
+        return {
           id: email.id,
           from: email.from_name || email.from_email,
           subject: email.subject,
@@ -385,33 +343,7 @@ function MailPageContent() {
           body: body, // Store body content
           body_html: body_html, // Store HTML content
         };
-        
-        // Debug: Log transformed email
-        console.log('📧 [TRANSFORM] Transformed email:', {
-          id: transformed.id,
-          subject: transformed.subject,
-          hasBody: !!transformed.body,
-          hasBodyHtml: !!transformed.body_html,
-          bodyValue: transformed.body,
-          bodyHtmlValue: transformed.body_html,
-        });
-        
-        return transformed;
       });
-      
-      // Debug: Log first email to check content
-      if (transformedEmails.length > 0) {
-        console.log('📧 [MAIL PAGE] First email content:', {
-          id: transformedEmails[0].id,
-          subject: transformedEmails[0].subject,
-          hasBody: !!transformedEmails[0].body,
-          hasBodyHtml: !!transformedEmails[0].body_html,
-          hasPreview: !!transformedEmails[0].preview,
-          bodyLength: transformedEmails[0].body?.length || 0,
-          bodyHtmlLength: transformedEmails[0].body_html?.length || 0,
-          previewLength: transformedEmails[0].preview?.length || 0,
-        });
-      }
       setEmails(transformedEmails);
     } else {
       setEmails([]);
@@ -1650,57 +1582,24 @@ function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailVi
         </div>
 
         <div className="prose max-w-none">
-          {(() => {
-            // Debug: Log email content when displaying
-            // Check all possible property names
-            const bodyHtml = email.body_html || email.bodyHtml || email.html_content || email.htmlContent;
-            const body = email.body || email.text_content || email.textContent;
-            const preview = email.preview;
-            
-            console.log('📧 [EMAIL VIEWER] Displaying email content:', {
-              id: email.id,
-              subject: email.subject,
-              hasBody: !!body,
-              hasBodyHtml: !!bodyHtml,
-              hasPreview: !!preview,
-              bodyValue: body,
-              bodyHtmlValue: bodyHtml,
-              previewValue: preview,
-              allEmailKeys: Object.keys(email),
-              emailObject: email,
-            });
-            
-            if (bodyHtml) {
-              console.log('✅ [EMAIL VIEWER] Using body_html:', bodyHtml.substring(0, 100));
-              return (
-                <div 
-                  className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300"
-                  dangerouslySetInnerHTML={{ __html: bodyHtml }}
-                />
-              );
-            } else if (body) {
-              console.log('✅ [EMAIL VIEWER] Using body:', body.substring(0, 100));
-              return (
-                <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                  {body}
-                </p>
-              );
-            } else if (preview) {
-              console.log('✅ [EMAIL VIEWER] Using preview:', preview.substring(0, 100));
-              return (
-                <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                  {preview}
-                </p>
-              );
-            } else {
-              console.log('❌ [EMAIL VIEWER] No content available');
-              return (
-                <p className="text-[16px] leading-relaxed text-gray-500 dark:text-gray-400 italic">
-                  Aucun contenu disponible
-                </p>
-              );
-            }
-          })()}
+          {email.body_html ? (
+            <div 
+              className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300"
+              dangerouslySetInnerHTML={{ __html: email.body_html }}
+            />
+          ) : email.body ? (
+            <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+              {email.body}
+            </p>
+          ) : email.preview ? (
+            <p className="text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+              {email.preview}
+            </p>
+          ) : (
+            <p className="text-[16px] leading-relaxed text-gray-500 dark:text-gray-400 italic">
+              Aucun contenu disponible
+            </p>
+          )}
         </div>
 
         {/* Zone de composition pour Répondre */}

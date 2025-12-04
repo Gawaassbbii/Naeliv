@@ -167,14 +167,6 @@ export async function POST(request: NextRequest) {
     let body: any;
     try {
       body = JSON.parse(rawBody);
-      console.log('📧 [INBOUND EMAIL] Body parsé:', {
-        type: body.type,
-        hasData: !!body.data,
-        keys: Object.keys(body),
-        dataKeys: body.data ? Object.keys(body.data) : [],
-        fullBody: JSON.stringify(body, null, 2).substring(0, 2000), // Log first 2000 chars
-      });
-      
       // Vérifier si c'est un webhook inbound (email.received) ou outbound (email.delivered, email.bounced, etc.)
       if (body.type !== 'email.received') {
         console.log(`⚠️ [INBOUND EMAIL] Webhook de type "${body.type}" ignoré (attendu: "email.received")`);
@@ -521,15 +513,6 @@ function extractEmailData(body: any) {
     
     // Resend fournit email_id dans le webhook, on peut l'utiliser pour récupérer le contenu
     const emailId = data.email_id;
-    
-    console.log('📧 [EXTRACT] Contenu extrait:', {
-      hasTextBody: !!textBody,
-      hasHtmlBody: !!htmlBody,
-      textBodyLength: textBody.length,
-      htmlBodyLength: htmlBody.length,
-      emailId: emailId,
-      dataKeys: Object.keys(data),
-    });
     
     return {
       fromEmail: data.from || data.from_email || data.envelope?.from || '',
