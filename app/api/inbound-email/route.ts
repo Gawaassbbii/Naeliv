@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Webhook } from 'svix';
+import { Resend } from 'resend';
 import { supabase } from '@/lib/supabase';
 import { verifyResendSignature, verifyMailgunSignature } from '@/lib/security/webhook-verification';
 import { checkRateLimit } from '@/lib/security/rate-limiter';
@@ -445,8 +446,12 @@ function extractEmailData(body: any) {
     
     // Resend envoie le contenu dans des champs différents, il faut peut-être le récupérer via l'API
     // Pour l'instant, on utilise les champs disponibles
-    const textBody = data.text || data['body-plain'] || data.body?.text || '';
-    const htmlBody = data.html || data['body-html'] || data.body?.html || '';
+    let textBody = data.text || data['body-plain'] || data.body?.text || '';
+    let htmlBody = data.html || data['body-html'] || data.body?.html || '';
+    
+    // Si le contenu n'est pas dans le webhook, essayer de le récupérer via l'API Resend
+    // Resend fournit email_id dans le webhook, on peut l'utiliser pour récupérer le contenu
+    const emailId = data.email_id;
     
     return {
       fromEmail: data.from || data.from_email || data.envelope?.from || '',
@@ -455,6 +460,7 @@ function extractEmailData(body: any) {
       subject: data.subject || '',
       textBody: textBody,
       htmlBody: htmlBody,
+      emailId: emailId, // Store email_id to fetch content later if needed
       preview: textBody.substring(0, 100) || htmlBody.replace(/<[^>]*>/g, '').substring(0, 100) || 'Pas de contenu',
     };
   }
