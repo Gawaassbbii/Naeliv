@@ -818,6 +818,8 @@ function MailPageContent() {
           activeFolder={activeFolder}
           setActiveFolder={setActiveFolder}
           folderCounts={folderCounts}
+          countVisibility={countVisibility}
+          setCountVisibility={setCountVisibility}
           onComposeNew={handleComposeNew}
         />
 
