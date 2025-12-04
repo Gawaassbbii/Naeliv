@@ -278,9 +278,21 @@ function MailPageContent() {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error loading emails:', error);
+      console.error('❌ [MAIL PAGE] Error loading emails:', error);
       setIsLoading(false);
       return;
+    }
+
+    console.log(`📧 [MAIL PAGE] Loaded ${data?.length || 0} emails from Supabase for folder: ${folder}`);
+    console.log(`📧 [MAIL PAGE] User ID: ${user.id}`);
+    if (data && data.length > 0) {
+      console.log(`📧 [MAIL PAGE] First email sample:`, {
+        id: data[0].id,
+        from: data[0].from_email,
+        subject: data[0].subject,
+        archived: data[0].archived,
+        deleted: data[0].deleted,
+      });
     }
 
     if (data && data.length > 0) {

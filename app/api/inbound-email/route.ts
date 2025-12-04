@@ -261,13 +261,17 @@ export async function POST(request: NextRequest) {
       .single();
     
     if (profileError || !profile) {
-      console.error('User not found for email:', sanitizedData.to);
+      console.error('❌ [INBOUND EMAIL] User not found for email:', sanitizedData.to);
+      console.error('❌ [INBOUND EMAIL] Profile error:', profileError);
       // Ne pas révéler que l'utilisateur n'existe pas (sécurité)
+      // Mais on logue pour le débogage
       return NextResponse.json(
         { success: true, message: 'Email processed' },
         { status: 200 }
       );
     }
+
+    console.log(`✅ [INBOUND EMAIL] User found: ${profile.email} (ID: ${profile.id})`);
 
     // 13. Vérifier si l'expéditeur est dans les contacts (pour Premium Shield)
     const { data: contact } = await supabase
@@ -311,6 +315,12 @@ export async function POST(request: NextRequest) {
       
       email = data;
       emailError = error;
+      
+      if (error) {
+        console.error('❌ [INBOUND EMAIL] Error inserting email with service role:', error);
+      } else {
+        console.log(`✅ [INBOUND EMAIL] Email inserted successfully with ID: ${data?.id}`);
+      }
     } else {
       // Méthode 2: Utiliser la fonction PostgreSQL (fallback)
       const { data, error } = await supabase.rpc('insert_email_via_webhook', {
@@ -329,7 +339,9 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         emailError = error;
+        console.error('❌ [INBOUND EMAIL] Error inserting email with PostgreSQL function:', error);
       } else {
+        console.log(`✅ [INBOUND EMAIL] Email inserted via PostgreSQL function with ID: ${data}`);
         // Récupérer l'email créé
         const { data: emailData, error: fetchError } = await supabase
           .from('emails')
@@ -339,11 +351,15 @@ export async function POST(request: NextRequest) {
         
         email = emailData;
         emailError = fetchError;
+        
+        if (fetchError) {
+          console.error('❌ [INBOUND EMAIL] Error fetching inserted email:', fetchError);
+        }
       }
     }
     
     if (emailError) {
-      console.error('Error storing email:', emailError);
+      console.error('❌ [INBOUND EMAIL] Error storing email:', emailError);
       return NextResponse.json(
         { error: 'Failed to store email', details: emailError.message },
         { status: 500 }
@@ -352,8 +368,10 @@ export async function POST(request: NextRequest) {
 
     // 16. Log de sécurité
     const processingTime = Date.now() - startTime;
-    console.log(`✅ Email received and stored:`, {
+    console.log(`✅ [INBOUND EMAIL] Email received and stored successfully:`, {
       emailId: email.id,
+      userId: profile.id,
+      userEmail: profile.email,
       from: sanitizedData.fromEmail,
       to: sanitizedData.to,
       subject: sanitizedData.subject.substring(0, 50),
