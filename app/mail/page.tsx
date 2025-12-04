@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useTheme, ThemeProvider } from '@/app/contexts/ThemeContext';
 import { translations } from '@/app/translations/mail';
 import { Switch } from '@/app/components/ui/switch';
+import DayNightSwitch from '@/app/components/ui/DayNightSwitch';
 
 // ============================================================================
 // CONSTANTS
@@ -2117,6 +2118,7 @@ function SettingsPanel({
                     description={userPlan === 'pro' ? "Recevez vos emails par lots à heures fixes pour rester concentré" : "Recevez vos emails par lots à heures fixes (limité avec Essential)"}
                     enabled={zenModeActive}
                     onToggle={() => onZenModeChange(!zenModeActive)}
+                    useDayNightSwitch={true}
                   />
 
                   {/* Smart Paywall - Disponible pour tous, mais réglage du prix uniquement pour PRO */}
@@ -2610,9 +2612,10 @@ interface FeatureCardProps {
   additionalSettings?: React.ReactNode;
   disabled?: boolean;
   disabledMessage?: string;
+  useDayNightSwitch?: boolean;
 }
 
-function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onToggle, additionalSettings, disabled = false, disabledMessage }: FeatureCardProps) {
+function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onToggle, additionalSettings, disabled = false, disabledMessage, useDayNightSwitch = false }: FeatureCardProps) {
   return (
     <div className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl p-6 shadow-sm ${disabled ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between">
@@ -2627,12 +2630,19 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
             {additionalSettings}
           </div>
         </div>
-        <Switch
-          checked={enabled}
-          onChange={onToggle}
-          disabled={disabled}
-          className="ml-4"
-        />
+        {useDayNightSwitch ? (
+          <DayNightSwitch
+            checked={enabled}
+            onChange={() => onToggle()}
+          />
+        ) : (
+          <Switch
+            checked={enabled}
+            onChange={onToggle}
+            disabled={disabled}
+            className="ml-4"
+          />
+        )}
       </div>
     </div>
   );
