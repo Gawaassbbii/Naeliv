@@ -67,6 +67,36 @@ function MailPageContent() {
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
   const [isSending, setIsSending] = useState(false);
+  
+  // Préférences de visibilité des compteurs (localStorage)
+  const [countVisibility, setCountVisibility] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('naeliv_count_visibility');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          // Si erreur de parsing, utiliser les valeurs par défaut
+        }
+      }
+    }
+    // Par défaut, tous les compteurs sont visibles
+    return {
+      inbox: true,
+      starred: true,
+      sent: true,
+      replied: true,
+      archived: true,
+      trash: true,
+    };
+  });
+  
+  // Sauvegarder les préférences dans localStorage quand elles changent
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('naeliv_count_visibility', JSON.stringify(countVisibility));
+    }
+  }, [countVisibility]);
 
   useEffect(() => {
     checkUser();
@@ -1058,7 +1088,7 @@ interface SidebarProps {
 }
 
 // Memoize Sidebar to prevent unnecessary re-renders
-const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setActiveFolder, folderCounts, onComposeNew }: SidebarProps) {
+const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setActiveFolder, folderCounts, countVisibility, onComposeNew }: SidebarProps) {
   const { language } = useTheme();
   const t = translations[language];
   
@@ -1109,42 +1139,42 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           icon={Inbox} 
           label={t.inbox} 
           active={activeFolder === 'inbox'} 
-          count={folderCounts.inbox}
+          count={countVisibility.inbox ? folderCounts.inbox : undefined}
           onClick={() => setActiveFolder('inbox')}
         />
         <NavItem 
           icon={Star} 
           label={t.starred} 
           active={activeFolder === 'starred'}
-          count={folderCounts.starred}
+          count={countVisibility.starred ? folderCounts.starred : undefined}
           onClick={() => setActiveFolder('starred')}
         />
         <NavItem 
           icon={Send} 
-          label={t.sent} 
+          label={t.sent}
           active={activeFolder === 'sent'}
-          count={folderCounts.sent}
+          count={countVisibility.sent ? folderCounts.sent : undefined}
           onClick={() => setActiveFolder('sent')}
         />
         <NavItem 
           icon={Reply} 
           label={t.replied} 
           active={activeFolder === 'replied'}
-          count={folderCounts.replied}
+          count={countVisibility.replied ? folderCounts.replied : undefined}
           onClick={() => setActiveFolder('replied')}
         />
         <NavItem 
           icon={Archive} 
           label={t.archived} 
           active={activeFolder === 'archived'}
-          count={folderCounts.archived}
+          count={countVisibility.archived ? folderCounts.archived : undefined}
           onClick={() => setActiveFolder('archived')}
         />
         <NavItem 
           icon={Trash2} 
           label={t.trash} 
           active={activeFolder === 'trash'}
-          count={folderCounts.trash}
+          count={countVisibility.trash ? folderCounts.trash : undefined}
           onClick={() => setActiveFolder('trash')}
         />
 
