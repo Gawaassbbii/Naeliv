@@ -2769,9 +2769,18 @@ function SmartPaywallCard({ enabled, onToggle, price, onPriceChange, userPlan }:
             style={{
               left: '2px',
               top: '2px',
+              border: '1px solid',
             }}
-            animate={{ x: enabled ? 22 : 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }}
+            animate={{ 
+              x: enabled ? 22 : 0,
+              borderColor: enabled ? '#000000' : '#d1d5db',
+            }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 500, 
+              damping: 30,
+              mass: 0.5
+            }}
           />
         </motion.button>
       </div>
