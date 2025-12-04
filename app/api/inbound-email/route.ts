@@ -210,23 +210,21 @@ export async function POST(request: NextRequest) {
     }
 
     // 6.5. Si le contenu est vide et qu'on a un email_id, récupérer le contenu via l'API Resend
-    // Note: L'API Resend emails.get() est pour les emails sortants, pas pour les emails entrants
-    // Pour les emails entrants, le contenu devrait être dans le webhook
-    // Cette section est commentée car l'API Resend ne permet pas de récupérer le contenu des emails entrants
-    /*
+    // Note: Le webhook email.received de Resend ne contient PAS le contenu, seulement les métadonnées
+    // Il faut utiliser resend.emails.receiving.get() pour récupérer le contenu des emails entrants
     if ((!emailData.textBody && !emailData.htmlBody) && emailData.emailId && resend) {
       try {
-        console.log('📧 [INBOUND EMAIL] Récupération du contenu via API Resend pour email_id:', emailData.emailId);
-        const emailContentResponse = await resend.emails.get(emailData.emailId);
+        console.log('📧 [INBOUND EMAIL] Récupération du contenu via API Resend receiving.get() pour email_id:', emailData.emailId);
+        const emailContentResponse = await resend.emails.receiving.get(emailData.emailId);
         
         if (emailContentResponse && !emailContentResponse.error && emailContentResponse.data) {
           console.log('✅ [INBOUND EMAIL] Contenu récupéré via API Resend');
           const emailContent = emailContentResponse.data;
           // Mettre à jour les données avec le contenu récupéré
-          emailData.textBody = (emailContent as any).text || emailData.textBody || '';
-          emailData.htmlBody = (emailContent as any).html || emailData.htmlBody || '';
+          emailData.textBody = emailContent.text || emailData.textBody || '';
+          emailData.htmlBody = emailContent.html || emailData.htmlBody || '';
           // Mettre à jour le preview
-          emailData.preview = emailData.textBody.substring(0, 100) || emailData.htmlBody.replace(/<[^>]*>/g, '').substring(0, 100) || 'Pas de contenu';
+          emailData.preview = emailData.textBody.substring(0, 100) || emailContent.html?.replace(/<[^>]*>/g, '').substring(0, 100) || 'Pas de contenu';
         } else {
           console.warn('⚠️ [INBOUND EMAIL] Impossible de récupérer le contenu via API Resend:', emailContentResponse?.error);
         }
@@ -235,7 +233,6 @@ export async function POST(request: NextRequest) {
         // Continuer même si la récupération échoue
       }
     }
-    */
 
     // 7. Validation stricte des emails
     if (!isValidEmail(emailData.fromEmail)) {
