@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
           has_paid_stamp: hasPaidStamp,
           archived: false,
           deleted: false,
-          starred: false,
+          starred: true, // Marquer automatiquement tous les nouveaux emails comme favoris
         })
         .select()
         .single();

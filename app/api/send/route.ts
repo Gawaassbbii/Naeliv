@@ -177,6 +177,9 @@ export async function POST(request: NextRequest) {
       email_references: references || inReplyTo || null,
       created_at: new Date().toISOString(),
       received_at: new Date().toISOString(), // Utiliser received_at pour la date
+      archived: false, // Ne pas archiver
+      deleted: false, // Ne pas supprimer
+      starred: false, // Ne pas marquer comme favori (c'est un email envoyé)
     };
 
     const { error: insertError } = await supabaseAdmin

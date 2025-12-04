@@ -786,6 +786,8 @@ function MailPageContent() {
         setZenModeActive={setZenModeActive}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        countVisibility={countVisibility}
+        setCountVisibility={setCountVisibility}
       />
 
       {/* Zen Mode Banner */}
@@ -954,10 +956,12 @@ interface HeaderProps {
   setZenModeActive: (active: boolean) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  countVisibility: Record<string, boolean>;
+  setCountVisibility: (visibility: Record<string, boolean>) => void;
 }
 
 // Memoize Header to prevent unnecessary re-renders
-const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenModeActive, searchQuery, setSearchQuery }: HeaderProps) {
+const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenModeActive, searchQuery, setSearchQuery, countVisibility, setCountVisibility }: HeaderProps) {
   const { theme, language, setTheme, setLanguage } = useTheme();
   const t = translations[language];
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1403,7 +1407,7 @@ interface EmailViewerProps {
   onForward: (email: any) => void;
 }
 
-function EmailViewer({ email, onArchive, onDelete, onReply, onForward }: EmailViewerProps) {
+function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForward, loadEmails, loadFolderCounts }: EmailViewerProps) {
   const { language } = useTheme();
   const t = translations[language];
   const [emailIndex, setEmailIndex] = useState<number | null>(null);
@@ -1853,12 +1857,11 @@ function SettingsPanel({
   const [rewind, setRewind] = useState(true);
   const [stampPrice, setStampPrice] = useState(0.10);
   const [rewindDelay, setRewindDelay] = useState('30');
-  const [activeSection, setActiveSection] = useState<'compte' | 'fonctionnalites' | 'notifications' | 'securite' | 'abonnement'>('fonctionnalites');
+  const [activeSection, setActiveSection] = useState<'compte' | 'fonctionnalites' | 'notifications' | 'affichage' | 'securite' | 'abonnement'>('fonctionnalites');
   const t = translations[language];
   
-  // Get user email and plan
-  const [userEmail, setUserEmail] = useState('test@naeliv.com');
-  const [userPlan, setUserPlan] = useState<'essential' | 'pro'>('essential');
+  // Get user email
+  const userEmail = user?.email || 'Chargement...';
   const [fullName, setFullName] = useState('');
   const [emailSignature, setEmailSignature] = useState('--\nCordialement,\nVotre nom');
   
