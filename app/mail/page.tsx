@@ -2080,7 +2080,7 @@ function SettingsPanel({
                               }));
                             }}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              countVisibility[key] ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'
+                              countVisibility[key] ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'
                             }`}
                           >
                             <span
@@ -2105,7 +2105,7 @@ function SettingsPanel({
                   {/* Zen Mode - Disponible pour tous */}
                   <FeatureCard
                     icon={Zap}
-                    iconColor="text-purple-600"
+                    iconColor="text-black dark:text-white"
                     name="Zen Mode"
                     description={userPlan === 'pro' ? "Recevez vos emails par lots à heures fixes pour rester concentré" : "Recevez vos emails par lots à heures fixes (limité avec Essential)"}
                     enabled={zenModeActive}
