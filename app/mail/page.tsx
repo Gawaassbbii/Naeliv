@@ -413,13 +413,14 @@ function MailPageContent() {
     try {
       // Fetch all counts in parallel
       const [inboxResult, starredResult, archivedResult, trashResult, sentResult, repliedResult] = await Promise.all([
-        // Inbox: not archived, not deleted
+        // Inbox: not archived, not deleted, and folder is NOT 'sent' (to exclude sent emails)
         supabase
           .from('emails')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', user.id)
           .eq('archived', false)
-          .eq('deleted', false),
+          .eq('deleted', false)
+          .neq('folder', 'sent'),
         
         // Starred: starred, not archived, not deleted
         supabase
