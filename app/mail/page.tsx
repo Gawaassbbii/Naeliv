@@ -2093,10 +2093,12 @@ function SettingsPanel({
                                 [key]: !prev[key],
                               }));
                             }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ease-in-out ${
-                              countVisibility[key] ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'
-                            }`}
+                            className="relative inline-flex h-6 w-11 items-center rounded-full"
                             whileTap={{ scale: 0.95 }}
+                            animate={{
+                              backgroundColor: countVisibility[key] ? '#000000' : '#d1d5db',
+                            }}
+                            transition={{ duration: 0.3, ease: 'easeInOut' }}
                           >
                             <motion.span
                               className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
@@ -2104,8 +2106,15 @@ function SettingsPanel({
                                 left: '2px',
                                 top: '2px',
                               }}
-                              animate={{ x: countVisibility[key] ? 22 : 0 }}
-                              transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }}
+                              animate={{ 
+                                x: countVisibility[key] ? 22 : 0,
+                              }}
+                              transition={{ 
+                                type: "spring", 
+                                stiffness: 500, 
+                                damping: 30,
+                                mass: 0.5
+                              }}
                             />
                           </motion.button>
                         </div>
@@ -2642,10 +2651,14 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
         <motion.button
           onClick={disabled ? undefined : onToggle}
           disabled={disabled}
-          className={`relative w-11 h-6 rounded-full transition-colors duration-300 ease-in-out flex-shrink-0 ml-4 ${
-            enabled ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'
-          } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+          className={`relative w-11 h-6 rounded-full flex-shrink-0 ml-4 ${
+            disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+          }`}
           whileTap={disabled ? {} : { scale: 0.95 }}
+          animate={{
+            backgroundColor: enabled ? '#000000' : '#d1d5db',
+          }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
           <motion.span
             className="absolute h-4 w-4 rounded-full bg-white shadow-sm"
@@ -2653,8 +2666,15 @@ function FeatureCard({ icon: Icon, iconColor, name, description, enabled, onTogg
               left: '2px',
               top: '2px',
             }}
-            animate={{ x: enabled ? 22 : 0 }}
-            transition={{ type: "spring", stiffness: 400, damping: 25, mass: 0.8 }}
+            animate={{ 
+              x: enabled ? 22 : 0,
+            }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 500, 
+              damping: 30,
+              mass: 0.5
+            }}
           />
         </motion.button>
       </div>
