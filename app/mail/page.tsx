@@ -2096,10 +2096,10 @@ function SettingsPanel({
                           <Switch
                             checked={countVisibility[key]}
                             onChange={(checked) => {
-                              setCountVisibility((prev: Record<string, boolean>) => ({
-                                ...prev,
+                              setCountVisibility({
+                                ...countVisibility,
                                 [key]: checked,
-                              }));
+                              });
                             }}
                           />
                         </div>
