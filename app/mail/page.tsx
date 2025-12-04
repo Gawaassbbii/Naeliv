@@ -28,7 +28,21 @@ function MailPageContent() {
   const router = useRouter();
   const { theme, language, setTheme, setLanguage } = useTheme();
   const t = translations[language];
-  const [zenModeActive, setZenModeActive] = useState(true);
+  // Récupérer l'état du zen mode depuis localStorage, par défaut false
+  const [zenModeActive, setZenModeActive] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('zenModeActive');
+      return saved === 'true';
+    }
+    return false;
+  });
+  
+  // Sauvegarder l'état du zen mode dans localStorage quand il change
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('zenModeActive', zenModeActive.toString());
+    }
+  }, [zenModeActive]);
   
   // Force dark mode styles with inline styles
   React.useEffect(() => {
