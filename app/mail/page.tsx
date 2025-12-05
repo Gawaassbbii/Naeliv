@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useTheme, ThemeProvider } from '@/app/contexts/ThemeContext';
 import { translations } from '@/app/translations/mail';
 import { Switch } from '@/app/components/ui/switch';
-import { ALL_PROVIDERS_FLAT, ALL_BLOCKED_DOMAINS_FLAT } from '@/lib/email-providers';
+import { EMAIL_PROVIDERS, ALL_BLOCKED_DOMAINS_FLAT } from '@/lib/email-providers';
 
 // ============================================================================
 // CONSTANTS
@@ -1986,7 +1986,7 @@ function SettingsPanel({
   const [showAllProviders, setShowAllProviders] = useState(false);
 
   // Liste prédéfinie de fournisseurs (importée depuis lib/email-providers.ts)
-  const popularProviders = ALL_PROVIDERS_FLAT;
+  const popularProviders = EMAIL_PROVIDERS;
 
   // Charger les paramètres du pare-feu depuis Supabase
   useEffect(() => {
@@ -2043,11 +2043,24 @@ function SettingsPanel({
     }
   };
 
-  const toggleDomainBlock = async (domain: string) => {
-    const isBlocked = blockedDomains.includes(domain);
-    const newBlockedDomains = isBlocked
-      ? blockedDomains.filter(d => d !== domain)
-      : [...blockedDomains, domain];
+  // Vérifier si tous les domaines d'un fournisseur sont bloqués
+  const isProviderFullyBlocked = (providerDomains: string[]): boolean => {
+    return providerDomains.every(domain => blockedDomains.includes(domain));
+  };
+
+  // Bloquer/débloquer tous les domaines d'un fournisseur
+  const toggleProviderBlock = async (providerDomains: string[]) => {
+    const isFullyBlocked = isProviderFullyBlocked(providerDomains);
+    
+    let newBlockedDomains: string[];
+    if (isFullyBlocked) {
+      // Débloquer : retirer tous les domaines du fournisseur
+      newBlockedDomains = blockedDomains.filter(d => !providerDomains.includes(d));
+    } else {
+      // Bloquer : ajouter tous les domaines du fournisseur (sans doublons)
+      const domainsToAdd = providerDomains.filter(d => !blockedDomains.includes(d));
+      newBlockedDomains = [...blockedDomains, ...domainsToAdd];
+    }
     
     setBlockedDomains(newBlockedDomains);
     
@@ -2063,11 +2076,14 @@ function SettingsPanel({
       setBlockedDomains(blockedDomains);
       toast.error('Erreur lors de la sauvegarde');
     } else {
-      toast.success(isBlocked ? `${domain} débloqué` : `${domain} bloqué`);
+      const providerName = EMAIL_PROVIDERS.find(p => 
+        JSON.stringify(p.domains.sort()) === JSON.stringify(providerDomains.sort())
+      )?.name || 'Fournisseur';
+      toast.success(isFullyBlocked ? `${providerName} débloqué` : `${providerName} bloqué`);
     }
   };
 
-  const addException = async (domain: string, email: string) => {
+  const addException = async (providerId: string, email: string) => {
     if (!email || !email.includes('@')) {
       toast.error('Adresse email invalide');
       return;
@@ -2081,7 +2097,7 @@ function SettingsPanel({
 
     const newWhitelistedSenders = [...whitelistedSenders, emailLower];
     setWhitelistedSenders(newWhitelistedSenders);
-    setExceptionInputs({ ...exceptionInputs, [domain]: '' });
+    setExceptionInputs({ ...exceptionInputs, [providerId]: '' });
 
     // Sauvegarder automatiquement
     const { error } = await supabase
@@ -2148,11 +2164,16 @@ function SettingsPanel({
     }
   };
 
-  // Filtrer les fournisseurs selon la recherche
-  const filteredProviders = popularProviders.filter(provider =>
-    provider.name.toLowerCase().includes(firewallSearchQuery.toLowerCase()) ||
-    provider.domain.toLowerCase().includes(firewallSearchQuery.toLowerCase())
-  );
+  // Filtrer les fournisseurs selon la recherche (par nom ou domaine)
+  const filteredProviders = popularProviders.filter(provider => {
+    if (!firewallSearchQuery) return true;
+    const query = firewallSearchQuery.toLowerCase();
+    // Rechercher dans le nom du fournisseur
+    if (provider.name.toLowerCase().includes(query)) return true;
+    // Rechercher dans les domaines du fournisseur
+    if (provider.domains.some(domain => domain.toLowerCase().includes(query))) return true;
+    return false;
+  });
 
   // Limiter l'affichage à 5 par défaut (sauf si recherche active ou showAllProviders)
   const displayProviders = firewallSearchQuery || showAllProviders 
@@ -2671,7 +2692,7 @@ function SettingsPanel({
                         Fournisseurs d'emails
                       </h2>
                       <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">
-                        Activez le switch pour bloquer un domaine. Les emails de ce domaine seront automatiquement rejetés, sauf ceux dans vos exceptions.
+                        Activez le switch pour bloquer tous les domaines d'un fournisseur. Les emails de ces domaines seront automatiquement rejetés, sauf ceux dans vos exceptions.
                       </p>
 
                       <div className="space-y-3 max-h-[500px] overflow-y-auto">
@@ -2681,21 +2702,27 @@ function SettingsPanel({
                           </p>
                         ) : (
                           displayProviders.map((provider) => {
-                            const isBlocked = blockedDomains.includes(provider.domain);
-                            const domainExceptions = whitelistedSenders.filter(email => 
-                              email.toLowerCase().endsWith(`@${provider.domain}`)
-                            );
+                            const isBlocked = isProviderFullyBlocked(provider.domains);
+                            // Récupérer toutes les exceptions pour tous les domaines de ce fournisseur
+                            const providerExceptions = whitelistedSenders.filter(email => {
+                              const emailDomain = email.split('@')[1]?.toLowerCase();
+                              return emailDomain && provider.domains.includes(emailDomain);
+                            });
+
+                            // Afficher les domaines principaux (max 3) avec "..." si plus
+                            const mainDomains = provider.domains.slice(0, 3);
+                            const hasMoreDomains = provider.domains.length > 3;
 
                             return (
-                              <div key={provider.domain} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 pb-3 last:pb-0">
+                              <div key={provider.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 pb-3 last:pb-0">
                                 <div className="flex items-center justify-between py-3">
                                   <div className="flex-1">
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 flex-wrap">
                                       <span className="text-[16px] font-medium text-black dark:text-white">
                                         {provider.name}
                                       </span>
                                       <span className="text-[13px] text-gray-500 dark:text-gray-400">
-                                        ({provider.domain})
+                                        ({mainDomains.join(', ')}{hasMoreDomains ? `, +${provider.domains.length - 3} autres` : ''})
                                       </span>
                                       {isBlocked && (
                                         <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded text-[11px] font-medium">
@@ -2706,11 +2733,11 @@ function SettingsPanel({
                                   </div>
                                   <Switch
                                     checked={isBlocked}
-                                    onChange={() => toggleDomainBlock(provider.domain)}
+                                    onChange={() => toggleProviderBlock(provider.domains)}
                                   />
                                 </div>
 
-                                {/* Zone d'exceptions (s'affiche si le domaine est bloqué) */}
+                                {/* Zone d'exceptions (s'affiche si le fournisseur est bloqué) */}
                                 <AnimatePresence>
                                   {isBlocked && (
                                     <motion.div
@@ -2721,28 +2748,28 @@ function SettingsPanel({
                                       className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700"
                                     >
                                       <p className="text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-3">
-                                        Exceptions autorisées pour {provider.domain}
+                                        Exceptions pour {provider.name} ({mainDomains.join(', ')}{hasMoreDomains ? '...' : ''})
                                       </p>
                                       
                                       {/* Input pour ajouter une exception */}
                                       <div className="flex items-center gap-2 mb-3">
                                         <input
                                           type="email"
-                                          value={exceptionInputs[provider.domain] || ''}
+                                          value={exceptionInputs[provider.id] || ''}
                                           onChange={(e) => setExceptionInputs({
                                             ...exceptionInputs,
-                                            [provider.domain]: e.target.value
+                                            [provider.id]: e.target.value
                                           })}
                                           placeholder="email@example.com"
                                           className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white"
                                           onKeyPress={(e) => {
                                             if (e.key === 'Enter') {
-                                              addException(provider.domain, exceptionInputs[provider.domain] || '');
+                                              addException(provider.id, exceptionInputs[provider.id] || '');
                                             }
                                           }}
                                         />
                                         <motion.button
-                                          onClick={() => addException(provider.domain, exceptionInputs[provider.domain] || '')}
+                                          onClick={() => addException(provider.id, exceptionInputs[provider.id] || '')}
                                           className="px-3 py-2 bg-black text-white rounded-lg text-[13px] font-medium hover:bg-gray-800 transition-colors flex items-center gap-1"
                                           whileHover={{ scale: 1.02 }}
                                           whileTap={{ scale: 0.98 }}
@@ -2753,9 +2780,9 @@ function SettingsPanel({
                                       </div>
 
                                       {/* Liste des exceptions */}
-                                      {domainExceptions.length > 0 && (
+                                      {providerExceptions.length > 0 && (
                                         <div className="space-y-2">
-                                          {domainExceptions.map((email) => (
+                                          {providerExceptions.map((email) => (
                                             <div
                                               key={email}
                                               className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
