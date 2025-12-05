@@ -8,6 +8,9 @@ import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/app/contexts/ThemeContext";
 import Link from "next/link";
 
+// Forcer le rendu dynamique pour éviter les erreurs de pré-rendu
+export const dynamic = 'force-dynamic';
+
 function PaiementSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
