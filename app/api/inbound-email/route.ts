@@ -322,6 +322,65 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ [INBOUND EMAIL] User found: ${profile.email} (ID: ${profile.id})`);
 
+    // 12.5. Vérification du pare-feu (blocked_domains et whitelisted_senders)
+    // Récupérer les paramètres du pare-feu depuis le profil (utiliser admin pour contourner RLS)
+    const { data: firewallProfile, error: firewallError } = await (supabaseAdmin || clientToUse)
+      .from('profiles')
+      .select('blocked_domains, whitelisted_senders')
+      .eq('id', profile.id)
+      .single();
+
+    if (firewallError) {
+      console.error('❌ [FIREWALL] Erreur lors de la récupération des paramètres:', firewallError);
+    }
+
+    if (!firewallError && firewallProfile) {
+      const blockedDomains = firewallProfile.blocked_domains || [];
+      const whitelistedSenders = firewallProfile.whitelisted_senders || [];
+      
+      // Extraire l'email proprement (gérer le format "Nom <email@domain.com>")
+      let senderEmailRaw = sanitizedData.fromEmail.trim();
+      // Extraire l'email si format "Nom <email@domain.com>"
+      const emailMatch = senderEmailRaw.match(/<(.+?)>/);
+      if (emailMatch) {
+        senderEmailRaw = emailMatch[1];
+      }
+      const senderEmail = senderEmailRaw.toLowerCase().trim();
+      
+      // Extraire le domaine de l'expéditeur
+      const senderDomain = senderEmail.split('@')[1]?.toLowerCase().trim() || '';
+
+      console.log(`🔍 [FIREWALL] Vérification pare-feu:`, {
+        senderEmail,
+        senderDomain,
+        blockedDomainsCount: blockedDomains.length,
+        whitelistedSendersCount: whitelistedSenders.length,
+        blockedDomains: blockedDomains,
+      });
+
+      // Algorithme de filtrage du pare-feu
+      // 1. Vérifier si l'expéditeur est dans whitelisted_senders -> ACCEPTER (même si domaine bloqué)
+      if (whitelistedSenders.length > 0 && whitelistedSenders.includes(senderEmail)) {
+        console.log(`✅ [FIREWALL] Email autorisé via exception: ${senderEmail}`);
+        // Continuer le traitement normal
+      }
+      // 2. Vérifier si le domaine est dans blocked_domains -> REJETER
+      else if (blockedDomains.length > 0 && senderDomain && blockedDomains.includes(senderDomain)) {
+        console.log(`🚫 [FIREWALL] Email bloqué - domaine bloqué: ${senderDomain} (expéditeur: ${senderEmail})`);
+        // Suppression silencieuse - retourner 200 pour ne pas révéler le blocage
+        return NextResponse.json(
+          { success: true, message: 'Email processed' },
+          { status: 200 }
+        );
+      }
+      // 3. Sinon -> ACCEPTER (continuer le traitement normal)
+      else {
+        console.log(`✅ [FIREWALL] Email autorisé: ${senderEmail} (domaine: ${senderDomain})`);
+      }
+    } else {
+      console.log(`⚠️ [FIREWALL] Pas de paramètres de pare-feu trouvés ou erreur, email autorisé par défaut`);
+    }
+
     // 13. Vérifier si l'expéditeur est dans les contacts (pour Premium Shield)
     const { data: contact } = await supabase
       .from('contacts')

@@ -3,14 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, CreditCard, Lock, Zap } from "lucide-react";
+import { ArrowLeft, Check, CreditCard, Lock, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useTheme } from "@/app/contexts/ThemeContext";
 
-export default function PaiementPage() {
+export default function AliasPaymentPage() {
   const router = useRouter();
   const { theme } = useTheme();
   const [user, setUser] = useState<any>(null);
+  const [username, setUsername] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
 
@@ -22,6 +23,18 @@ export default function PaiementPage() {
         return;
       }
       setUser(user);
+      
+      // Récupérer le username depuis le profil
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile?.username) {
+        setUsername(profile.username);
+      }
+      
       setLoading(false);
     };
     checkUser();
@@ -37,7 +50,7 @@ export default function PaiementPage() {
         return;
       }
 
-      // Créer une session de checkout Stripe pour l'abonnement PRO
+      // Créer une session de checkout Stripe pour l'achat d'alias
       const response = await fetch('/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: {
@@ -45,7 +58,7 @@ export default function PaiementPage() {
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          productType: 'subscription', // 'subscription' pour l'abonnement PRO
+          productType: 'alias', // 'alias' pour l'achat d'alias
         }),
       });
 
@@ -87,8 +100,6 @@ export default function PaiementPage() {
           <motion.button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
           >
             <ArrowLeft size={20} />
             <span className="text-[14px]">Retour</span>
@@ -104,33 +115,32 @@ export default function PaiementPage() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="text-center mb-12">
           <h1 className="text-[40px] font-bold text-black dark:text-white mb-4">
-            Passer à Naeliv PRO
+            Acheter votre adresse email
           </h1>
           <p className="text-[18px] text-gray-600 dark:text-gray-400">
-            Débloquez toutes les fonctionnalités premium
+            Obtenez votre adresse email unique à vie
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-          {/* Left: Plan Details */}
+          {/* Left: Alias Details */}
           <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl p-8 shadow-sm">
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-[14px] font-medium flex items-center gap-2">
-                  <Zap size={16} />
-                  <span>Naeliv PRO</span>
+                <div className="px-4 py-2 bg-black text-white rounded-lg text-[14px] font-medium flex items-center gap-2">
+                  <Mail size={16} />
+                  <span>Votre alias</span>
                 </div>
-                <span className="px-3 py-1 bg-black dark:bg-white text-white dark:text-black rounded-full text-[12px] font-medium">
-                  POPULAIRE
+                <span className="px-3 py-1 bg-green-500 text-white rounded-full text-[12px] font-medium">
+                  À VIE
                 </span>
               </div>
               <div className="mb-6">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-[48px] font-bold text-black dark:text-white">5€</span>
-                  <span className="text-[18px] text-gray-600 dark:text-gray-400">/mois</span>
+                  <span className="text-[48px] font-bold text-black dark:text-white">60,50€</span>
                 </div>
                 <p className="text-[14px] text-gray-500 dark:text-gray-400 mt-2">
-                  Facturé mensuellement, annulable à tout moment
+                  Paiement unique, valable à vie
                 </p>
               </div>
             </div>
@@ -139,37 +149,31 @@ export default function PaiementPage() {
               <div className="flex items-start gap-3">
                 <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
                 <span className="text-[14px] text-gray-700 dark:text-gray-300">
-                  Tout Naeliv Essential
+                  Utilisez votre adresse <strong>{username}@naeliv.com</strong> avec ou sans abonnement PRO
                 </span>
               </div>
               <div className="flex items-start gap-3">
                 <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
                 <span className="text-[14px] text-gray-700 dark:text-gray-300">
-                  Smart Paywall avec réglage du prix (0,10€ à 100€)
+                  Conservez votre adresse même si vous annulez PRO
                 </span>
               </div>
               <div className="flex items-start gap-3">
                 <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
                 <span className="text-[14px] text-gray-700 dark:text-gray-300">
-                  Immersion Linguistique (toutes les langues)
+                  Achat unique, valable à vie
                 </span>
               </div>
               <div className="flex items-start gap-3">
                 <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
                 <span className="text-[14px] text-gray-700 dark:text-gray-300">
-                  Rewind jusqu'à 60 secondes
+                  Pas d'abonnement, pas de renouvellement
                 </span>
               </div>
               <div className="flex items-start gap-3">
                 <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
                 <span className="text-[14px] text-gray-700 dark:text-gray-300">
-                  Stockage illimité
-                </span>
-              </div>
-              <div className="flex items-start gap-3">
-                <Check size={20} className="text-green-500 flex-shrink-0 mt-0.5" />
-                <span className="text-[14px] text-gray-700 dark:text-gray-300">
-                  Support prioritaire
+                  Votre adresse email personnalisée pour toujours
                 </span>
               </div>
             </div>
@@ -218,11 +222,11 @@ export default function PaiementPage() {
                     Total
                   </span>
                   <span className="text-[24px] font-bold text-black dark:text-white">
-                    5,00€
+                    60,50€
                   </span>
                 </div>
                 <p className="text-[12px] text-gray-500 dark:text-gray-400 mb-6">
-                  Facturé mensuellement. Vous pouvez annuler à tout moment depuis vos paramètres.
+                  Paiement unique. Votre alias sera valable à vie.
                 </p>
               </div>
 
@@ -230,9 +234,7 @@ export default function PaiementPage() {
               <motion.button
                 onClick={handlePayment}
                 disabled={processing}
-                className="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-[16px] font-semibold hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                whileHover={!processing ? { scale: 1.02 } : {}}
-                whileTap={!processing ? { scale: 0.98 } : {}}
+                className="w-full px-6 py-4 bg-black text-white rounded-lg text-[16px] font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {processing ? (
                   <>

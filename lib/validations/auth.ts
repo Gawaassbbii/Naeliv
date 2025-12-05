@@ -1,6 +1,20 @@
 import { z } from 'zod';
 
 /**
+ * Liste des noms d'utilisateurs réservés pour protéger l'identité de la marque Naeliv
+ */
+export const RESERVED_USERNAMES = [
+  "admin", "administrator", "root", "system", "user", "guest",
+  "webmaster", "hostmaster", "postmaster", "abuse", "security",
+  "support", "help", "info", "contact", "hello", "hi",
+  "sales", "marketing", "press", "media", "jobs", "hr",
+  "billing", "invoice", "legal", "privacy",
+  "noreply", "no-reply", "notifications", "bot", "mailer-daemon",
+  "naeliv", "team", "staff", "official", "founder", "ceo", "cto",
+  "api", "dev", "test"
+];
+
+/**
  * Schéma de validation pour la connexion
  */
 export const loginSchema = z.object({
@@ -30,20 +44,35 @@ export const signupSchema = z.object({
     .min(3, 'Le nom d\'utilisateur doit contenir au moins 3 caractères')
     .max(30, 'Le nom d\'utilisateur ne peut pas dépasser 30 caractères')
     .regex(/^[a-z0-9._-]+$/, 'Caractères autorisés : lettres minuscules, chiffres, points, tirets, underscores')
-    .toLowerCase(),
+    .toLowerCase()
+    .refine(
+      (username) => !RESERVED_USERNAMES.includes(username.toLowerCase()),
+      {
+        message: 'Ce nom d\'utilisateur est réservé pour l\'équipe Naeliv. Veuillez en choisir un autre.',
+      }
+    ),
   password: z.string()
     .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
-    .max(128, 'Le mot de passe ne peut pas dépasser 128 caractères')
-    .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une majuscule')
-    .regex(/[a-z]/, 'Le mot de passe doit contenir au moins une minuscule')
-    .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre'),
+    .max(128, 'Le mot de passe ne peut pas dépasser 128 caractères'),
   confirmPassword: z.string(),
   plan: z.enum(['essential', 'pro'], {
     message: 'Le plan doit être "essential" ou "pro"',
   }),
-}).refine((data) => data.password === data.confirmPassword, {
+})
+.refine((data) => data.password === data.confirmPassword, {
   message: 'Les mots de passe ne correspondent pas',
   path: ['confirmPassword'],
+})
+.refine((data) => {
+  // Si le plan est Essential, le username doit contenir au moins un chiffre
+  if (data.plan === 'essential') {
+    return /[0-9]/.test(data.username);
+  }
+  // Pour PRO, pas de restriction
+  return true;
+}, {
+  message: 'Pour le plan Essential, le nom d\'utilisateur doit contenir au moins un chiffre (ex: prenom123).',
+  path: ['username'],
 });
 
 export type SignupInput = z.infer<typeof signupSchema>;

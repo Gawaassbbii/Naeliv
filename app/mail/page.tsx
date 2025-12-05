@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply, Eye } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply, Eye, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useTheme, ThemeProvider } from '@/app/contexts/ThemeContext';
 import { translations } from '@/app/translations/mail';
 import { Switch } from '@/app/components/ui/switch';
+import { ALL_PROVIDERS_FLAT, ALL_BLOCKED_DOMAINS_FLAT } from '@/lib/email-providers';
 
 // ============================================================================
 // CONSTANTS
@@ -71,6 +72,7 @@ function MailPageContent() {
   
   const [user, setUser] = useState<any>(null);
   const [userPlan, setUserPlan] = useState<'essential' | 'pro'>('essential');
+  const [aliasPurchased, setAliasPurchased] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFolder, setActiveFolder] = useState<'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied'>('inbox');
@@ -146,15 +148,19 @@ function MailPageContent() {
     } else {
       setUser(user);
       
-      // Récupérer le plan de l'utilisateur depuis Supabase
+      // Récupérer le plan et l'état d'achat d'alias depuis Supabase
       const { data: profile } = await supabase
         .from('profiles')
-        .select('plan')
+        .select('plan, alias_purchased')
         .eq('id', user.id)
         .single();
       
       if (profile?.plan) {
         setUserPlan(profile.plan as 'essential' | 'pro');
+      }
+      
+      if (profile?.alias_purchased) {
+        setAliasPurchased(profile.alias_purchased);
       }
     }
   };
@@ -814,6 +820,7 @@ function MailPageContent() {
         setCountVisibility={setCountVisibility}
         user={user}
         userPlan={userPlan}
+        aliasPurchased={aliasPurchased}
       />
 
       {/* Zen Mode Banner */}
@@ -990,10 +997,11 @@ interface HeaderProps {
   setCountVisibility: (visibility: Record<string, boolean>) => void;
   user: any;
   userPlan: 'essential' | 'pro';
+  aliasPurchased: boolean;
 }
 
 // Memoize Header to prevent unnecessary re-renders
-const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenModeActive, searchQuery, setSearchQuery, countVisibility, setCountVisibility, user, userPlan }: HeaderProps) {
+const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenModeActive, searchQuery, setSearchQuery, countVisibility, setCountVisibility, user, userPlan, aliasPurchased }: HeaderProps) {
   const { theme, language, setTheme, setLanguage } = useTheme();
   const t = translations[language];
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1106,6 +1114,7 @@ const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenMode
       setCountVisibility={setCountVisibility}
       user={user}
       userPlan={userPlan}
+      aliasPurchased={aliasPurchased}
     />
     </>
   );
@@ -1925,6 +1934,7 @@ interface SettingsPanelProps {
   setCountVisibility: (visibility: Record<string, boolean>) => void;
   user: any;
   userPlan: 'essential' | 'pro';
+  aliasPurchased: boolean;
 }
 
 function SettingsPanel({ 
@@ -1940,6 +1950,7 @@ function SettingsPanel({
   setCountVisibility,
   user,
   userPlan,
+  aliasPurchased,
 }: SettingsPanelProps) {
   const [notifications, setNotifications] = useState(true);
   const [premiumShield, setPremiumShield] = useState(true);
@@ -1948,7 +1959,7 @@ function SettingsPanel({
   const [rewind, setRewind] = useState(true);
   const [stampPrice, setStampPrice] = useState(0.10);
   const [rewindDelay, setRewindDelay] = useState('30');
-  const [activeSection, setActiveSection] = useState<'compte' | 'fonctionnalites' | 'notifications' | 'affichage' | 'securite' | 'abonnement'>('fonctionnalites');
+  const [activeSection, setActiveSection] = useState<'compte' | 'fonctionnalites' | 'notifications' | 'affichage' | 'securite' | 'abonnement' | 'parefeu'>('fonctionnalites');
   const t = translations[language];
   
   // Get user email
@@ -1965,6 +1976,189 @@ function SettingsPanel({
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  // Firewall settings
+  const [blockedDomains, setBlockedDomains] = useState<string[]>([]);
+  const [whitelistedSenders, setWhitelistedSenders] = useState<string[]>([]);
+  const [firewallSearchQuery, setFirewallSearchQuery] = useState('');
+  const [exceptionInputs, setExceptionInputs] = useState<Record<string, string>>({});
+  const [loadingFirewall, setLoadingFirewall] = useState(false);
+  const [showAllProviders, setShowAllProviders] = useState(false);
+
+  // Liste prédéfinie de fournisseurs (importée depuis lib/email-providers.ts)
+  const popularProviders = ALL_PROVIDERS_FLAT;
+
+  // Charger les paramètres du pare-feu depuis Supabase
+  useEffect(() => {
+    if (open && activeSection === 'parefeu' && user?.id) {
+      loadFirewallSettings();
+    }
+  }, [open, activeSection, user?.id]);
+
+  const loadFirewallSettings = async () => {
+    try {
+      setLoadingFirewall(true);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('blocked_domains, whitelisted_senders')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Erreur lors du chargement des paramètres du pare-feu:', error);
+        return;
+      }
+
+      if (profile) {
+        setBlockedDomains(profile.blocked_domains || []);
+        setWhitelistedSenders(profile.whitelisted_senders || []);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des paramètres du pare-feu:', error);
+    } finally {
+      setLoadingFirewall(false);
+    }
+  };
+
+  const saveFirewallSettings = async () => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          blocked_domains: blockedDomains,
+          whitelisted_senders: whitelistedSenders,
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        console.error('Erreur lors de la sauvegarde des paramètres du pare-feu:', error);
+        toast.error('Erreur lors de la sauvegarde');
+        return;
+      }
+
+      toast.success('Paramètres du pare-feu enregistrés');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des paramètres du pare-feu:', error);
+      toast.error('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const toggleDomainBlock = async (domain: string) => {
+    const isBlocked = blockedDomains.includes(domain);
+    const newBlockedDomains = isBlocked
+      ? blockedDomains.filter(d => d !== domain)
+      : [...blockedDomains, domain];
+    
+    setBlockedDomains(newBlockedDomains);
+    
+    // Sauvegarder automatiquement
+    const { error } = await supabase
+      .from('profiles')
+      .update({ blocked_domains: newBlockedDomains })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      // Revenir en arrière en cas d'erreur
+      setBlockedDomains(blockedDomains);
+      toast.error('Erreur lors de la sauvegarde');
+    } else {
+      toast.success(isBlocked ? `${domain} débloqué` : `${domain} bloqué`);
+    }
+  };
+
+  const addException = async (domain: string, email: string) => {
+    if (!email || !email.includes('@')) {
+      toast.error('Adresse email invalide');
+      return;
+    }
+
+    const emailLower = email.toLowerCase().trim();
+    if (whitelistedSenders.includes(emailLower)) {
+      toast.error('Cette adresse est déjà dans les exceptions');
+      return;
+    }
+
+    const newWhitelistedSenders = [...whitelistedSenders, emailLower];
+    setWhitelistedSenders(newWhitelistedSenders);
+    setExceptionInputs({ ...exceptionInputs, [domain]: '' });
+
+    // Sauvegarder automatiquement
+    const { error } = await supabase
+      .from('profiles')
+      .update({ whitelisted_senders: newWhitelistedSenders })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      setWhitelistedSenders(whitelistedSenders);
+      toast.error('Erreur lors de la sauvegarde');
+    } else {
+      toast.success('Exception ajoutée');
+    }
+  };
+
+  const removeException = async (email: string) => {
+    const newWhitelistedSenders = whitelistedSenders.filter(e => e !== email);
+    setWhitelistedSenders(newWhitelistedSenders);
+
+    // Sauvegarder automatiquement
+    const { error } = await supabase
+      .from('profiles')
+      .update({ whitelisted_senders: newWhitelistedSenders })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      setWhitelistedSenders(whitelistedSenders);
+      toast.error('Erreur lors de la sauvegarde');
+    } else {
+      toast.success('Exception supprimée');
+    }
+  };
+
+  const addCustomDomain = async (domain: string) => {
+    const domainLower = domain.toLowerCase().trim();
+    if (!domainLower || domainLower.includes('@') || domainLower.includes(' ')) {
+      toast.error('Domaine invalide');
+      return;
+    }
+
+    if (blockedDomains.includes(domainLower)) {
+      toast.error('Ce domaine est déjà bloqué');
+      return;
+    }
+
+    const newBlockedDomains = [...blockedDomains, domainLower];
+    setBlockedDomains(newBlockedDomains);
+    setFirewallSearchQuery('');
+
+    // Sauvegarder automatiquement
+    const { error } = await supabase
+      .from('profiles')
+      .update({ blocked_domains: newBlockedDomains })
+      .eq('id', user.id);
+
+    if (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      setBlockedDomains(blockedDomains);
+      toast.error('Erreur lors de la sauvegarde');
+    } else {
+      toast.success(`${domainLower} ajouté et bloqué`);
+    }
+  };
+
+  // Filtrer les fournisseurs selon la recherche
+  const filteredProviders = popularProviders.filter(provider =>
+    provider.name.toLowerCase().includes(firewallSearchQuery.toLowerCase()) ||
+    provider.domain.toLowerCase().includes(firewallSearchQuery.toLowerCase())
+  );
+
+  // Limiter l'affichage à 5 par défaut (sauf si recherche active ou showAllProviders)
+  const displayProviders = firewallSearchQuery || showAllProviders 
+    ? filteredProviders 
+    : filteredProviders.slice(0, 5);
+  const hasMoreProviders = !firewallSearchQuery && filteredProviders.length > 5 && !showAllProviders;
 
   if (!open) return null;
 
@@ -2070,6 +2264,12 @@ function SettingsPanel({
                 label="Abonnement" 
                 active={activeSection === 'abonnement'}
                 onClick={() => setActiveSection('abonnement')}
+              />
+              <SettingsNavItem 
+                icon={Shield} 
+                label="Pare-feu" 
+                active={activeSection === 'parefeu'}
+                onClick={() => setActiveSection('parefeu')}
               />
             </nav>
           </div>
@@ -2427,6 +2627,220 @@ function SettingsPanel({
               </div>
             )}
 
+            {activeSection === 'parefeu' && (
+              <div className="p-8 max-w-3xl mx-auto">
+                <h1 className="text-[32px] font-bold mb-8 text-black dark:text-white">Pare-feu</h1>
+                <p className="text-[14px] text-gray-600 dark:text-gray-400 mb-8">
+                  Bloquez des fournisseurs d'emails entiers tout en autorisant des exceptions spécifiques
+                </p>
+
+                {loadingFirewall ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black dark:border-white"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Barre de recherche */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-3 mb-4">
+                        <Search size={20} className="text-gray-500 dark:text-gray-400" />
+                        <input
+                          type="text"
+                          value={firewallSearchQuery}
+                          onChange={(e) => setFirewallSearchQuery(e.target.value)}
+                          placeholder="Rechercher un fournisseur ou ajouter un domaine personnalisé..."
+                          className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white"
+                        />
+                        {firewallSearchQuery && !ALL_BLOCKED_DOMAINS_FLAT.includes(firewallSearchQuery.toLowerCase().trim()) && (
+                          <motion.button
+                            onClick={() => addCustomDomain(firewallSearchQuery)}
+                            className="px-4 py-2 bg-black text-white rounded-lg text-[14px] font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Plus size={16} />
+                            <span>Ajouter</span>
+                          </motion.button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Liste des fournisseurs */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                      <h2 className="text-[20px] font-semibold mb-4 text-black dark:text-white">
+                        Fournisseurs d'emails
+                      </h2>
+                      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">
+                        Activez le switch pour bloquer un domaine. Les emails de ce domaine seront automatiquement rejetés, sauf ceux dans vos exceptions.
+                      </p>
+
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                        {displayProviders.length === 0 ? (
+                          <p className="text-[14px] text-gray-500 dark:text-gray-400 text-center py-8">
+                            Aucun fournisseur trouvé
+                          </p>
+                        ) : (
+                          displayProviders.map((provider) => {
+                            const isBlocked = blockedDomains.includes(provider.domain);
+                            const domainExceptions = whitelistedSenders.filter(email => 
+                              email.toLowerCase().endsWith(`@${provider.domain}`)
+                            );
+
+                            return (
+                              <div key={provider.domain} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0 pb-3 last:pb-0">
+                                <div className="flex items-center justify-between py-3">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-[16px] font-medium text-black dark:text-white">
+                                        {provider.name}
+                                      </span>
+                                      <span className="text-[13px] text-gray-500 dark:text-gray-400">
+                                        ({provider.domain})
+                                      </span>
+                                      {isBlocked && (
+                                        <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded text-[11px] font-medium">
+                                          BLOQUÉ
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Switch
+                                    checked={isBlocked}
+                                    onChange={() => toggleDomainBlock(provider.domain)}
+                                  />
+                                </div>
+
+                                {/* Zone d'exceptions (s'affiche si le domaine est bloqué) */}
+                                <AnimatePresence>
+                                  {isBlocked && (
+                                    <motion.div
+                                      initial={{ opacity: 0, height: 0 }}
+                                      animate={{ opacity: 1, height: 'auto' }}
+                                      exit={{ opacity: 0, height: 0 }}
+                                      transition={{ duration: 0.3 }}
+                                      className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700"
+                                    >
+                                      <p className="text-[13px] font-medium text-gray-700 dark:text-gray-300 mb-3">
+                                        Exceptions autorisées pour {provider.domain}
+                                      </p>
+                                      
+                                      {/* Input pour ajouter une exception */}
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <input
+                                          type="email"
+                                          value={exceptionInputs[provider.domain] || ''}
+                                          onChange={(e) => setExceptionInputs({
+                                            ...exceptionInputs,
+                                            [provider.domain]: e.target.value
+                                          })}
+                                          placeholder="email@example.com"
+                                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white"
+                                          onKeyPress={(e) => {
+                                            if (e.key === 'Enter') {
+                                              addException(provider.domain, exceptionInputs[provider.domain] || '');
+                                            }
+                                          }}
+                                        />
+                                        <motion.button
+                                          onClick={() => addException(provider.domain, exceptionInputs[provider.domain] || '')}
+                                          className="px-3 py-2 bg-black text-white rounded-lg text-[13px] font-medium hover:bg-gray-800 transition-colors flex items-center gap-1"
+                                          whileHover={{ scale: 1.02 }}
+                                          whileTap={{ scale: 0.98 }}
+                                        >
+                                          <Plus size={14} />
+                                          <span>Ajouter</span>
+                                        </motion.button>
+                                      </div>
+
+                                      {/* Liste des exceptions */}
+                                      {domainExceptions.length > 0 && (
+                                        <div className="space-y-2">
+                                          {domainExceptions.map((email) => (
+                                            <div
+                                              key={email}
+                                              className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
+                                            >
+                                              <span className="text-[13px] text-green-900 dark:text-green-100">
+                                                {email}
+                                              </span>
+                                              <motion.button
+                                                onClick={() => removeException(email)}
+                                                className="p-1 hover:bg-green-100 dark:hover:bg-green-900/40 rounded transition-colors"
+                                                whileHover={{ scale: 1.1 }}
+                                                whileTap={{ scale: 0.9 }}
+                                              >
+                                                <X size={14} className="text-green-700 dark:text-green-300" />
+                                              </motion.button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Bouton "Voir plus" / "Voir moins" */}
+                      {hasMoreProviders && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <motion.button
+                            onClick={() => setShowAllProviders(true)}
+                            className="w-full px-4 py-2 text-[14px] font-medium text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            Voir plus ({filteredProviders.length - 5} autres)
+                          </motion.button>
+                        </div>
+                      )}
+
+                      {showAllProviders && !firewallSearchQuery && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <motion.button
+                            onClick={() => setShowAllProviders(false)}
+                            className="w-full px-4 py-2 text-[14px] font-medium text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            Voir moins
+                          </motion.button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Statistiques */}
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                      <h3 className="text-[18px] font-semibold mb-4 text-black dark:text-white">
+                        Statistiques
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-[14px] text-gray-600 dark:text-gray-400 mb-1">
+                            Domaines bloqués
+                          </p>
+                          <p className="text-[24px] font-bold text-black dark:text-white">
+                            {blockedDomains.length}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[14px] text-gray-600 dark:text-gray-400 mb-1">
+                            Exceptions autorisées
+                          </p>
+                          <p className="text-[24px] font-bold text-black dark:text-white">
+                            {whitelistedSenders.length}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeSection === 'abonnement' && (
               <div className="p-8 max-w-3xl mx-auto">
                 <h1 className="text-[32px] font-bold mb-8 text-black dark:text-white">Abonnement & Facturation</h1>
@@ -2563,6 +2977,62 @@ function SettingsPanel({
                       >
                         Passer à Naeliv PRO
                       </motion.button>
+                    )}
+                  </div>
+
+                  {/* Achat d'alias Section */}
+                  <div className="bg-white border border-gray-300 rounded-xl p-6 shadow-sm">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h2 className="text-[20px] font-semibold text-black mb-1">Votre adresse email</h2>
+                        <p className="text-[14px] text-gray-500">
+                          {userEmail}
+                        </p>
+                      </div>
+                      {aliasPurchased ? (
+                        <div className="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-[14px] font-medium flex items-center gap-2">
+                          <Check size={16} />
+                          <span>Alias acheté</span>
+                        </div>
+                      ) : (
+                        <div className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-[14px] font-medium">
+                          Alias non acheté
+                        </div>
+                      )}
+                    </div>
+                    
+                    {!aliasPurchased && (
+                      <div className="space-y-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <p className="text-[14px] text-blue-900 mb-2">
+                            <strong>Achetez votre adresse email unique</strong>
+                          </p>
+                          <p className="text-[13px] text-blue-700 mb-3">
+                            Pour <strong>60,50€</strong>, vous pouvez acheter votre nom d'utilisateur <strong>{userEmail.split('@')[0]}</strong> et l'utiliser avec ou sans abonnement PRO.
+                          </p>
+                          <ul className="text-[13px] text-blue-700 space-y-1 mb-4">
+                            <li>✓ Utilisez votre adresse email sans abonnement PRO</li>
+                            <li>✓ Conservez votre adresse même si vous annulez PRO</li>
+                            <li>✓ Achat unique, valable à vie</li>
+                          </ul>
+                        </div>
+                        
+                        <motion.button
+                          onClick={() => window.location.href = '/paiement/alias'}
+                          className="w-full px-6 py-3 bg-black text-white rounded-lg text-[14px] font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <CreditCard size={18} />
+                          <span>Acheter mon alias (60,50€)</span>
+                        </motion.button>
+                      </div>
+                    )}
+                    
+                    {aliasPurchased && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p className="text-[14px] text-green-900">
+                          ✅ Votre alias a été acheté. Vous pouvez utiliser votre adresse email <strong>{userEmail}</strong> avec ou sans abonnement PRO.
+                        </p>
+                      </div>
                     )}
                   </div>
 

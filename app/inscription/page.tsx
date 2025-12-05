@@ -1,10 +1,12 @@
 ﻿"use client";
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Check, ArrowRight, Mail, User, Lock, CreditCard } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Check, ArrowRight, Mail, User, Lock, CreditCard, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+import { signupSchema, RESERVED_USERNAMES } from '@/lib/validations/auth';
 
 export default function Inscription() {
   const router = useRouter();
@@ -17,35 +19,117 @@ export default function Inscription() {
     password: '',
     confirmPassword: ''
   });
+  const [emailExistsError, setEmailExistsError] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [validationError, setValidationError] = useState<string>('');
+  
+  // Fonction pour calculer la force du mot de passe
+  const calculatePasswordStrength = (password: string): { strength: 'faible' | 'puissant' | 'très puissant', score: number } => {
+    if (!password) {
+      return { strength: 'faible', score: 0 };
+    }
+    
+    let score = 0;
+    
+    // Longueur
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+    if (password.length >= 16) score += 1;
+    
+    // Types de caractères
+    if (/[a-z]/.test(password)) score += 1; // minuscules
+    if (/[A-Z]/.test(password)) score += 1; // majuscules
+    if (/[0-9]/.test(password)) score += 1; // chiffres
+    if (/[^a-zA-Z0-9]/.test(password)) score += 1; // caractères spéciaux
+    
+    if (score <= 2) {
+      return { strength: 'faible', score };
+    } else if (score <= 4) {
+      return { strength: 'puissant', score };
+    } else {
+      return { strength: 'très puissant', score };
+    }
+  };
+  
+  const passwordStrength = calculatePasswordStrength(formData.password);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🔵 [INSCRIPTION] handleSubmit appelé, step:', step);
     
     if (step === 1) {
       // Step 1: Plan selection - just move to next step
+      console.log('🔵 [INSCRIPTION] Passage à l\'étape 2');
       setStep(2);
+      return;
     } else if (step === 2) {
       // Step 2: Personal info and password
-      if (!formData.firstName || !formData.lastName || !formData.username) {
-        alert('Veuillez remplir tous les champs (prénom, nom, adresse email)');
-        return;
-      }
+      console.log('🔵 [INSCRIPTION] Traitement de l\'étape 2');
+      setValidationError('');
+      setEmailExistsError(false);
 
-      // Validation du mot de passe
-      if (formData.password !== formData.confirmPassword) {
-        alert('Les mots de passe ne correspondent pas');
-        return;
-      }
+      // Validation avec Zod
+      const validationData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        username: formData.username,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        plan: selectedPlan,
+      };
 
-      if (formData.password.length < 8) {
-        alert('Le mot de passe doit contenir au moins 8 caractères');
+      const result = signupSchema.safeParse(validationData);
+      console.log('🔵 [INSCRIPTION] Résultat validation:', result.success, result.error?.issues);
+
+      if (!result.success) {
+        console.log('❌ [INSCRIPTION] Erreurs de validation:', result.error.issues);
+        // Chercher d'abord une erreur de nom réservé (message unique)
+        const reservedError = result.error.issues.find(
+          (err) => err.message.includes('réservé')
+        );
+        
+        if (reservedError) {
+          setValidationError(reservedError.message);
+        } else {
+          // Afficher la première erreur trouvée
+          const firstError = result.error.issues[0];
+          if (firstError) {
+            setValidationError(firstError.message);
+          } else {
+            setValidationError('Une erreur de validation est survenue');
+          }
+        }
         return;
       }
+      
+      console.log('✅ [INSCRIPTION] Validation réussie');
+      
+      // Réinitialiser l'erreur de validation si la validation réussit
+      setValidationError('');
 
       try {
-        // Création du compte avec Supabase
+        // Vérifier si l'email existe déjà avant de créer le compte
         const email = `${formData.username}@naeliv.com`;
+        setIsCheckingEmail(true);
+        setEmailExistsError(false);
+
+        // Vérifier dans la table profiles (méthode la plus fiable)
+        const { data: existingProfile, error: profileCheckError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (existingProfile) {
+          setEmailExistsError(true);
+          setIsCheckingEmail(false);
+          return;
+        }
+
+        setIsCheckingEmail(false);
+
+        // Création du compte avec Supabase
         const { data, error } = await supabase.auth.signUp({
           email,
           password: formData.password,
@@ -60,104 +144,81 @@ export default function Inscription() {
         });
 
         if (error) {
+          // Vérifier si l'erreur indique que l'email existe déjà
+          const errorMessage = error.message.toLowerCase();
+          if (errorMessage.includes('already registered') || 
+              errorMessage.includes('user already exists') ||
+              errorMessage.includes('email already')) {
+            setEmailExistsError(true);
+            setIsCheckingEmail(false);
+            return;
+          }
           alert(`Erreur lors de la création du compte : ${error.message}`);
+          setIsCheckingEmail(false);
           return;
         }
 
         if (!data.user) {
           alert('Erreur : Utilisateur non créé');
+          setIsCheckingEmail(false);
           return;
         }
 
-        // Attendre que la session soit établie et que le trigger SQL crée le profil
-        // On réessaye plusieurs fois car le trigger peut prendre du temps
+        // Le trigger SQL devrait créer le profil automatiquement
+        // On attend un peu pour laisser le temps au trigger de s'exécuter
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Vérifier que le profil a été créé par le trigger
         let profileCreated = false;
         let attempts = 0;
-        const maxAttempts = 5;
+        const maxAttempts = 3;
 
         while (!profileCreated && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 500));
           attempts++;
-
-          // Vérifier que le profil a été créé
+          
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id, email, username')
             .eq('id', data.user.id)
-            .single();
+            .maybeSingle();
 
           if (profile && !profileError) {
             profileCreated = true;
+            console.log('✅ Profil créé avec succès par le trigger SQL');
             break;
           }
 
-          // Si le profil n'existe toujours pas après 2 tentatives, essayer de le créer manuellement
-          if (attempts >= 2) {
-            // S'assurer que la session est établie en se connectant
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-              email,
-              password: formData.password,
-            });
-
-            if (!signInError) {
-              // Essayer de créer le profil avec upsert (évite les erreurs de doublon)
-              const { error: upsertError } = await supabase
-                .from('profiles')
-                .upsert({
-                  id: data.user.id,
-                  email: email,
-                  first_name: formData.firstName,
-                  last_name: formData.lastName,
-                  username: formData.username,
-                  plan: selectedPlan,
-                }, {
-                  onConflict: 'id'
-                });
-
-              if (!upsertError) {
-                profileCreated = true;
-                break;
-              } else {
-                console.error('Erreur lors de l\'upsert du profil:', upsertError);
-              }
-            }
+          // Attendre un peu plus entre chaque tentative
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
 
+        // Si le profil n'a pas été créé, ce n'est pas grave
+        // Le trigger SQL devrait le créer lors de la prochaine connexion
+        // ou l'utilisateur pourra se reconnecter
         if (!profileCreated) {
-          console.error('Impossible de créer le profil après plusieurs tentatives');
-          // Ne pas bloquer l'inscription, le trigger SQL devrait le créer plus tard
-          // ou l'utilisateur pourra se reconnecter et le profil sera créé
-          console.warn('Le profil sera créé automatiquement lors de la prochaine connexion');
+          console.warn('⚠️ Le profil n\'a pas été créé immédiatement. Il sera créé automatiquement lors de la prochaine connexion.');
         }
 
         // Vérifier si l'email est confirmé
-        // Si le trigger SQL n'a pas fonctionné, attendre un peu et réessayer de se connecter
-        // pour forcer la confirmation via le trigger
+        // Attendre un peu pour que le trigger SQL confirme l'email si nécessaire
         if (!data.user.email_confirmed_at) {
-          console.warn('Email non confirmé, attente du trigger SQL...');
-          // Attendre un peu pour que le trigger SQL confirme l'email
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Essayer de se connecter pour vérifier si l'email est maintenant confirmé
-          // Cela peut aussi déclencher le trigger si ce n'est pas encore fait
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password: formData.password,
-          });
-
-          if (signInError) {
-            console.warn('Connexion automatique échouée, mais le compte est créé:', signInError);
-            // Le compte est créé, l'utilisateur devra se connecter manuellement
-            // Le trigger SQL devrait confirmer l'email dans les prochaines secondes
-          }
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         // Redirection vers la page de connexion
         router.push('/connexion');
-      } catch (err) {
+      } catch (err: any) {
         console.error('Signup error:', err);
-        alert('Une erreur est survenue lors de la création du compte');
+        // Vérifier si l'erreur indique que l'email existe déjà
+        if (err?.message?.toLowerCase().includes('already') || 
+            err?.message?.toLowerCase().includes('exists')) {
+          setEmailExistsError(true);
+        } else {
+          alert('Une erreur est survenue lors de la création du compte');
+        }
+        setIsCheckingEmail(false);
       }
     }
   };
@@ -365,12 +426,19 @@ export default function Inscription() {
                   <input
                     type="text"
                     value={formData.username}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFormData({
                         ...formData,
                         username: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, '')
-                      })
-                    }
+                      });
+                      // Réinitialiser les erreurs si l'utilisateur modifie le nom d'utilisateur
+                      if (emailExistsError) {
+                        setEmailExistsError(false);
+                      }
+                      if (validationError) {
+                        setValidationError('');
+                      }
+                    }}
                     className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-black focus:outline-none transition-colors"
                     placeholder="votre_nom"
                     pattern="[a-z0-9._-]+"
@@ -381,6 +449,53 @@ export default function Inscription() {
                 <p className="text-[12px] text-gray-500 mt-2">
                   Lettres minuscules, chiffres, points, tirets et underscores uniquement
                 </p>
+                <AnimatePresence>
+                  {validationError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mt-3 bg-red-50 border-2 border-red-200 rounded-xl p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-[14px] font-medium text-red-900">
+                            {validationError}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                  {emailExistsError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="mt-3 bg-blue-50 border-2 border-blue-200 rounded-xl p-4"
+                    >
+                      <div className="flex items-start gap-3">
+                        <AlertCircle size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-[14px] font-medium text-blue-900 mb-1">
+                            Cette adresse email existe déjà
+                          </p>
+                          <p className="text-[13px] text-blue-700 mb-3">
+                            L'adresse <strong>{formData.username}@naeliv.com</strong> est déjà utilisée. 
+                            Voulez-vous vous connecter à la place ?
+                          </p>
+                          <Link
+                            href="/connexion"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-[13px] font-medium hover:bg-blue-700 transition-colors"
+                          >
+                            <ArrowRight size={16} />
+                            Aller à la connexion
+                          </Link>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div>
@@ -391,17 +506,59 @@ export default function Inscription() {
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    // Réinitialiser l'erreur de validation si l'utilisateur modifie le mot de passe
+                    if (validationError) {
+                      setValidationError('');
+                    }
+                  }}
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-black focus:outline-none transition-colors"
                   placeholder="••••••••"
                   minLength={8}
                   required
                 />
-                <p className="text-[12px] text-gray-500 mt-2">
-                  Minimum 8 caractères
-                </p>
+                
+                {/* Barre de force du mot de passe */}
+                {formData.password && (
+                  <div className="mt-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ 
+                            width: passwordStrength.strength === 'faible' ? '33%' : 
+                                   passwordStrength.strength === 'puissant' ? '66%' : '100%'
+                          }}
+                          transition={{ duration: 0.3 }}
+                          className={`h-full rounded-full ${
+                            passwordStrength.strength === 'faible' ? 'bg-red-500' :
+                            passwordStrength.strength === 'puissant' ? 'bg-yellow-500' :
+                            'bg-green-500'
+                          }`}
+                        />
+                      </div>
+                      <span className={`text-[12px] font-medium ${
+                        passwordStrength.strength === 'faible' ? 'text-red-600' :
+                        passwordStrength.strength === 'puissant' ? 'text-yellow-600' :
+                        'text-green-600'
+                      }`}>
+                        {passwordStrength.strength === 'faible' && 'Faible'}
+                        {passwordStrength.strength === 'puissant' && 'Puissant'}
+                        {passwordStrength.strength === 'très puissant' && 'Très puissant'}
+                      </span>
+                    </div>
+                    <p className="text-[12px] text-gray-500">
+                      Minimum 8 caractères
+                    </p>
+                  </div>
+                )}
+                
+                {!formData.password && (
+                  <p className="text-[12px] text-gray-500 mt-2">
+                    Minimum 8 caractères
+                  </p>
+                )}
               </div>
 
               <div>
@@ -412,9 +569,13 @@ export default function Inscription() {
                 <input
                   type="password"
                   value={formData.confirmPassword}
-                  onChange={(e) =>
-                    setFormData({ ...formData, confirmPassword: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, confirmPassword: e.target.value });
+                    // Réinitialiser l'erreur de validation si l'utilisateur modifie la confirmation
+                    if (validationError) {
+                      setValidationError('');
+                    }
+                  }}
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-black focus:outline-none transition-colors"
                   placeholder="••••••••"
                   required
@@ -457,27 +618,42 @@ export default function Inscription() {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex gap-4 mt-12">
+          <div className="flex flex-row gap-4 w-full mt-6">
             {step > 1 && (
               <motion.button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="flex-1 px-8 py-4 border-2 border-gray-300 rounded-full hover:border-black transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                className="h-12 w-full flex-1 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 flex items-center justify-center transition-colors"
+                whileHover={{}}
+                whileTap={{}}
               >
-                Retour
+                <span>Retour</span>
               </motion.button>
             )}
             <motion.button
               type="submit"
-              className="flex-1 px-8 py-4 bg-black text-white rounded-full hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              disabled={isCheckingEmail || emailExistsError || !!validationError}
+              className="h-12 w-full flex-1 rounded-xl bg-black text-white text-sm font-medium hover:bg-gray-800 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              whileHover={{}}
+              whileTap={{}}
             >
-              {step === 1 && 'Continuer'}
-              {step === 2 && 'Créer mon compte'}
-              <ArrowRight size={20} />
+              {isCheckingEmail ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Vérification...</span>
+                </span>
+              ) : (
+                <>
+                  <span>
+                    {step === 1 && 'Continuer'}
+                    {step === 2 && 'Créer mon compte'}
+                  </span>
+                  <ArrowRight size={18} />
+                </>
+              )}
             </motion.button>
           </div>
         </form>
