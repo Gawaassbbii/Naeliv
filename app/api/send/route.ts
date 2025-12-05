@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Récupérer le profil utilisateur (prénom, email)
+    // 4. Récupérer le profil utilisateur (prénom, email, plan)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('first_name, email')
+      .select('first_name, email, plan')
       .eq('id', user.id)
       .single();
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     // 5. Parser le body de la requête
     const body = await request.json();
-    const { to, subject, text, html, inReplyTo, references } = body;
+    let { to, subject, text, html, inReplyTo, references } = body;
 
     // 6. Validation
     if (!to || !subject) {
@@ -108,6 +108,23 @@ export async function POST(request: NextRequest) {
         { error: 'Au moins un des champs "text" ou "html" est requis' },
         { status: 400 }
       );
+    }
+
+    // 6.5. Ajouter la signature "Envoyé depuis naeliv" pour les comptes Essential
+    // Seulement si elle n'est pas déjà présente et si le plan est Essential
+    if (profile?.plan === 'essential') {
+      const signature = 'Envoyé depuis naeliv';
+      const signatureText = `\n\n--\n${signature}`;
+      const signatureHtml = `<br><br>--<br>${signature}`;
+      
+      // Vérifier si la signature est déjà présente
+      const hasSignature = text?.includes(signature) || html?.includes(signature);
+      
+      if (!hasSignature) {
+        // Ajouter la signature
+        text = text ? text + signatureText : signatureText;
+        html = html ? html + signatureHtml : `<p>${signatureHtml}</p>`;
+      }
     }
 
     // 7. Construire l'adresse "from" avec le format: "Prénom <email@naeliv.com>"

@@ -165,136 +165,6 @@ function MailPageContent() {
     }
   };
 
-  // Initialize mock emails in Supabase if they don't exist
-  const initializeMockEmails = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    // Vérifier si des emails existent déjà
-    const { data: existingEmails } = await supabase
-      .from('emails')
-      .select('id')
-      .eq('user_id', user.id)
-      .limit(1);
-
-    // Si des emails existent déjà, ne pas initialiser les mockés
-    if (existingEmails && existingEmails.length > 0) {
-      return;
-    }
-
-    // Créer les emails mockés dans Supabase
-    const mockEmails = [
-      {
-        user_id: user.id,
-        from_email: 'marie.dubois@example.com',
-        from_name: 'Marie Dubois',
-        subject: 'Réunion de demain',
-        body: 'Bonjour, je voulais confirmer notre réunion de demain à 14h. Pouvez-vous apporter les documents d...',
-        preview: 'Bonjour, je voulais confirmer notre réunion de demain à 14h. Pouvez-vous apporter les documents d...',
-        received_at: new Date().toISOString(),
-        read_at: null,
-        starred: true,
-        archived: false,
-        deleted: false,
-        has_paid_stamp: false,
-      },
-      {
-        user_id: user.id,
-        from_email: 'thomas.laurent@example.com',
-        from_name: 'Thomas Laurent',
-        subject: 'Proposition de projet',
-        body: 'Suite à notre conversation, voici la proposition détaillée pour le nouveau projet. J\'attends vos retours.',
-        preview: 'Suite à notre conversation, voici la proposition détaillée pour le nouveau projet. J\'attends vos retours.',
-        received_at: new Date().toISOString(),
-        read_at: null,
-        starred: false,
-        archived: false,
-        deleted: false,
-        has_paid_stamp: true,
-      },
-      {
-        user_id: user.id,
-        from_email: 'newsletter@naeliv.com',
-        from_name: 'Newsletter Naeliv',
-        subject: 'Nouvelles fonctionnalités disponibles',
-        body: 'Découvrez les dernières mises à jour de Naeliv: Zen Mode amélioré, nouvelles langues pour Immersi...',
-        preview: 'Découvrez les dernières mises à jour de Naeliv: Zen Mode amélioré, nouvelles langues pour Immersi...',
-        received_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        read_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        starred: false,
-        archived: false,
-        deleted: false,
-        has_paid_stamp: false,
-      },
-      {
-        user_id: user.id,
-        from_email: 'sophie.martin@example.com',
-        from_name: 'Sophie Martin',
-        subject: 'Feedback sur la présentation',
-        body: 'Excellente présentation aujourd\'hui ! Quelques suggestions pour la prochaine fois...',
-        preview: 'Excellente présentation aujourd\'hui ! Quelques suggestions pour la prochaine fois...',
-        received_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        read_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        starred: true,
-        archived: false,
-        deleted: false,
-        has_paid_stamp: false,
-      },
-      {
-        user_id: user.id,
-        from_email: 'jean.dupont@example.com',
-        from_name: 'Jean Dupont',
-        subject: 'Budget Q4 2025',
-        body: 'Voici le récapitulatif du budget pour le dernier trimestre. Merci de valider avant vendredi.',
-        preview: 'Voici le récapitulatif du budget pour le dernier trimestre. Merci de valider avant vendredi.',
-        received_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        read_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        starred: false,
-        archived: false,
-        deleted: false,
-        has_paid_stamp: false,
-      },
-      {
-        user_id: user.id,
-        from_email: 'ancien.client@example.com',
-        from_name: 'Ancien Client',
-        subject: 'Opportunité de collaboration',
-        body: 'Cela fait un moment ! J\'ai une proposition intéressante à vous faire...',
-        preview: 'Cela fait un moment ! J\'ai une proposition intéressante à vous faire...',
-        received_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-        read_at: null,
-        starred: false,
-        archived: false,
-        deleted: false,
-        has_paid_stamp: false,
-      },
-      {
-        user_id: user.id,
-        from_email: 'service.rh@example.com',
-        from_name: 'Service RH',
-        subject: 'Documents administratifs',
-        body: 'Merci de compléter les documents ci-joints pour finaliser votre dossier...',
-        preview: 'Merci de compléter les documents ci-joints pour finaliser votre dossier...',
-        received_at: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000).toISOString(),
-        read_at: null,
-        starred: false,
-        archived: false,
-        deleted: false,
-        has_paid_stamp: false,
-      },
-    ];
-
-    const { error } = await supabase
-      .from('emails')
-      .insert(mockEmails);
-
-    if (error) {
-      console.error('Error initializing mock emails:', error);
-    } else {
-      console.log('Mock emails initialized in Supabase');
-    }
-  };
-
   // Load emails from Supabase with server-side filtering
   const loadEmails = async (folder: 'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied' = 'inbox') => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -305,10 +175,8 @@ function MailPageContent() {
     // Don't clear emails here - keep them visible during loading
     setSelectedEmail(null);
 
-    // Initialiser les emails mockés si nécessaire (seulement au premier chargement)
-    if (folder === 'inbox') {
-      await initializeMockEmails();
-    }
+    // Les emails d'exemple ne sont plus créés automatiquement
+    // Les nouveaux utilisateurs commencent avec une boîte mail vide
 
     // Build query with server-side filtering based on folder
     let query = supabase
@@ -935,10 +803,22 @@ function MailPageContent() {
                 <textarea
                   value={composeBody}
                   onChange={(e) => setComposeBody(e.target.value)}
+                  onBlur={() => {
+                    // Ajouter la signature automatiquement si Essential et si elle n'est pas déjà présente
+                    if (userPlan === 'essential' && composeBody.trim() && !composeBody.includes('Envoyé depuis naeliv')) {
+                      const signature = '\n\n--\nEnvoyé depuis naeliv';
+                      setComposeBody(prev => prev + signature);
+                    }
+                  }}
                   placeholder="Écrivez votre message ici..."
                   rows={12}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-[14px] bg-white dark:bg-gray-800 text-black dark:text-white resize-none"
                 />
+                {userPlan === 'essential' && (
+                  <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-1">
+                    La signature "Envoyé depuis naeliv" sera ajoutée automatiquement. Vous pouvez la supprimer si vous le souhaitez.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1529,6 +1409,18 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
         return;
       }
 
+      // Récupérer le plan de l'utilisateur
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', user?.id)
+        .single();
+
+      // Préparer le texte et HTML (la signature sera ajoutée automatiquement par l'API pour les Essential)
+      let replyText = replyBody;
+      let replyHtml = `<p>${replyBody.replace(/\n/g, '<br>')}</p>`;
+
       // Préparer les headers pour la réponse (fil de discussion)
       const inReplyTo = email.message_id || email.id?.toString();
       const references = email.email_references || inReplyTo;
@@ -1543,8 +1435,8 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
         body: JSON.stringify({
           to: replyTo,
           subject: replySubject,
-          text: replyBody,
-          html: `<p>${replyBody.replace(/\n/g, '<br>')}</p>`,
+          text: replyText,
+          html: replyHtml,
           inReplyTo: inReplyTo || undefined,
           references: references || undefined,
         }),
@@ -1596,6 +1488,10 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
         return;
       }
 
+      // Préparer le texte et HTML (la signature sera ajoutée automatiquement par l'API pour les Essential)
+      let forwardText = forwardBody;
+      let forwardHtml = `<p>${forwardBody.replace(/\n/g, '<br>')}</p>`;
+
       // Envoyer l'email via l'API
       const response = await fetch('/api/send', {
         method: 'POST',
@@ -1606,8 +1502,8 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
         body: JSON.stringify({
           to: forwardTo,
           subject: forwardSubject,
-          text: forwardBody,
-          html: `<p>${forwardBody.replace(/\n/g, '<br>')}</p>`,
+          text: forwardText,
+          html: forwardHtml,
         }),
       });
 
@@ -1964,8 +1860,30 @@ function SettingsPanel({
   
   // Get user email
   const userEmail = user?.email || 'Chargement...';
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [emailSignature, setEmailSignature] = useState('--\nCordialement,\nVotre nom');
+  
+  // Charger les données du profil depuis Supabase
+  useEffect(() => {
+    if (user?.id) {
+      const loadProfile = async () => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          setFirstName(profile.first_name || '');
+          setLastName(profile.last_name || '');
+          setAvatarUrl(profile.avatar_url || null);
+        }
+      };
+      loadProfile();
+    }
+  }, [user?.id]);
   
   // Notification settings
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -2480,15 +2398,168 @@ function SettingsPanel({
                     />
                   </div>
 
-                  {/* Full Name */}
+                  {/* Photo de profil */}
                   <div>
                     <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Nom complet
+                      Photo de profil
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="Photo de profil" className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={32} className="text-gray-400 dark:text-gray-500" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            
+                            // Vérifier la taille du fichier (max 5MB)
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error('Le fichier est trop volumineux (max 5MB)');
+                              return;
+                            }
+                            
+                            try {
+                              // Vérifier si le bucket existe, sinon le créer via l'API
+                              const checkResponse = await fetch('/api/storage/create-avatars-bucket', {
+                                method: 'GET'
+                              });
+                              
+                              const checkData = await checkResponse.json();
+                              
+                              if (!checkData.exists) {
+                                // Créer le bucket
+                                const createResponse = await fetch('/api/storage/create-avatars-bucket', {
+                                  method: 'POST'
+                                });
+                                
+                                const createData = await createResponse.json();
+                                
+                                if (!createResponse.ok || !createData.success) {
+                                  toast.error('Le bucket "avatars" n\'existe pas et n\'a pas pu être créé automatiquement. Veuillez le créer manuellement dans Supabase Storage.');
+                                  console.error('Erreur création bucket:', createData);
+                                  return;
+                                }
+                                
+                                console.log('✅ Bucket "avatars" créé automatiquement');
+                              }
+                              
+                              // Upload vers Supabase Storage
+                              const fileExt = file.name.split('.').pop();
+                              const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
+                              const filePath = fileName;
+                              
+                              const { data: uploadData, error: uploadError } = await supabase.storage
+                                .from('avatars')
+                                .upload(filePath, file, { 
+                                  upsert: true,
+                                  cacheControl: '3600',
+                                  contentType: file.type
+                                });
+                              
+                              if (uploadError) {
+                                console.error('❌ [AVATAR UPLOAD] Erreur upload:', uploadError);
+                                
+                                // Messages d'erreur spécifiques selon le type d'erreur
+                                if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('not found')) {
+                                  toast.error('Le bucket "avatars" n\'existe pas. Veuillez le créer dans Supabase Storage (voir la documentation).');
+                                } else if (uploadError.message?.includes('new row violates row-level security')) {
+                                  toast.error('Erreur de permissions. Vérifiez les politiques RLS du bucket "avatars".');
+                                } else if (uploadError.message?.includes('File size exceeds maximum')) {
+                                  toast.error('Le fichier est trop volumineux (max 5MB)');
+                                } else {
+                                  toast.error(`Erreur lors de l'upload: ${uploadError.message || 'Erreur inconnue'}`);
+                                }
+                                return;
+                              }
+                              
+                              // Récupérer l'URL publique
+                              const { data: { publicUrl } } = supabase.storage
+                                .from('avatars')
+                                .getPublicUrl(filePath);
+                              
+                              // Mettre à jour le profil
+                              const { error: updateError } = await supabase
+                                .from('profiles')
+                                .update({ avatar_url: publicUrl })
+                                .eq('id', user?.id);
+                              
+                              if (updateError) {
+                                console.error('❌ [AVATAR UPLOAD] Erreur mise à jour profil:', updateError);
+                                toast.error(`Erreur lors de la mise à jour: ${updateError.message || 'Erreur inconnue'}`);
+                                return;
+                              }
+                              
+                              setAvatarUrl(publicUrl);
+                              toast.success('Photo de profil mise à jour');
+                            } catch (error: any) {
+                              console.error('❌ [AVATAR UPLOAD] Erreur inattendue:', error);
+                              toast.error(`Erreur: ${error.message || 'Erreur inconnue'}`);
+                            }
+                          }}
+                          className="hidden"
+                          id="avatar-upload"
+                        />
+                        <label
+                          htmlFor="avatar-upload"
+                          className="inline-block px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg text-[14px] font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors cursor-pointer"
+                        >
+                          Choisir une photo
+                        </label>
+                        {avatarUrl && (
+                          <button
+                            onClick={async () => {
+                              const { error } = await supabase
+                                .from('profiles')
+                                .update({ avatar_url: null })
+                                .eq('id', user?.id);
+                              
+                              if (error) {
+                                toast.error('Erreur lors de la suppression');
+                                return;
+                              }
+                              
+                              setAvatarUrl(null);
+                              toast.success('Photo supprimée');
+                            }}
+                            className="ml-2 px-4 py-2 bg-red-500 text-white rounded-lg text-[14px] font-medium hover:bg-red-600 transition-colors"
+                          >
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Prénom */}
+                  <div>
+                    <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Prénom
                     </label>
                     <input
                       type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="Votre prénom"
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+                    />
+                  </div>
+
+                  {/* Nom */}
+                  <div>
+                    <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Nom
+                    </label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
                       placeholder="Votre nom"
                       className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                     />
@@ -2510,8 +2581,21 @@ function SettingsPanel({
                   {/* Save Button */}
                   <div className="pt-4">
                     <motion.button
-                      onClick={() => {
-                        alert('Modifications enregistrées avec succès !');
+                      onClick={async () => {
+                        const { error } = await supabase
+                          .from('profiles')
+                          .update({
+                            first_name: firstName,
+                            last_name: lastName,
+                          })
+                          .eq('id', user?.id);
+                        
+                        if (error) {
+                          toast.error('Erreur lors de la sauvegarde');
+                          return;
+                        }
+                        
+                        toast.success('Modifications enregistrées avec succès !');
                       }}
                       className="px-6 py-3 bg-black dark:bg-white text-white dark:text-black rounded-lg text-[14px] font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
                       whileHover={{ scale: 1.02 }}

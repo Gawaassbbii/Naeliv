@@ -22,6 +22,22 @@ const MAX_EMAIL_SIZE = 25 * 1024 * 1024; // 25MB
 const RATE_LIMIT_MAX = 100; // Max 100 emails par minute par IP
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 
+// Alias système qui doivent être redirigés vers l'admin
+const SYSTEM_ALIASES = [
+  // Technique & Sécurité
+  'abuse', 'postmaster', 'webmaster', 'hostmaster', 'security', 'noc', 'admin', 'administrator',
+  // Support & Business
+  'support', 'help', 'contact', 'info', 'hello', 'team',
+  // Facturation & Légal
+  'billing', 'invoice', 'sales', 'legal', 'privacy', 'compliance',
+  // Com & RH
+  'press', 'media', 'jobs', 'careers',
+  // Bots
+  'noreply', 'no-reply', 'notifications', 'alert', 'welcome'
+];
+
+const SUPER_ADMIN_EMAIL = 'gabi@naeliv.com';
+
 // Client Resend pour récupérer le contenu des emails
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -288,39 +304,141 @@ export async function POST(request: NextRequest) {
       preview: extractPreview(emailData.textBody || emailData.htmlBody || '', 100),
     };
 
+    console.log(`📧 [INBOUND EMAIL] ⚠️⚠️⚠️ APRÈS SANITIZATION ⚠️⚠️⚠️`);
+    console.log(`📧 [INBOUND EMAIL] sanitizedData.to: ${sanitizedData.to}`);
+
     // 12. Trouver l'utilisateur par son adresse email
     // IMPORTANT: Utiliser supabaseAdmin pour contourner RLS
     const clientToUse = supabaseAdmin || supabase;
-    const { data: profile, error: profileError } = await clientToUse
+    
+    // Extraire le username du destinataire (partie avant le @)
+    const recipientEmail = sanitizedData.to.toLowerCase().trim();
+    const recipientUsername = recipientEmail.split('@')[0];
+    const recipientDomain = recipientEmail.split('@')[1];
+    
+    console.log(`📧 [INBOUND EMAIL] ============================================`);
+    console.log(`📧 [INBOUND EMAIL] Analyse du destinataire:`);
+    console.log(`📧 [INBOUND EMAIL]   - Email destinataire: ${recipientEmail}`);
+    console.log(`📧 [INBOUND EMAIL]   - Username: ${recipientUsername}`);
+    console.log(`📧 [INBOUND EMAIL]   - Domaine: ${recipientDomain}`);
+    console.log(`📧 [INBOUND EMAIL]   - SYSTEM_ALIASES contient 'support': ${SYSTEM_ALIASES.includes('support')}`);
+    console.log(`📧 [INBOUND EMAIL]   - Username en minuscules: ${recipientUsername.toLowerCase()}`);
+    console.log(`📧 [INBOUND EMAIL]   - Est dans SYSTEM_ALIASES: ${SYSTEM_ALIASES.includes(recipientUsername.toLowerCase())}`);
+    console.log(`📧 [INBOUND EMAIL]   - SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}`);
+    
+    // Vérifier si c'est un alias système
+    const isSystemAlias = SYSTEM_ALIASES.includes(recipientUsername.toLowerCase());
+    let targetEmail = sanitizedData.to.toLowerCase().trim();
+    let modifiedSubject = sanitizedData.subject;
+    
+    console.log(`📧 [INBOUND EMAIL]   - isSystemAlias: ${isSystemAlias}`);
+    console.log(`📧 [INBOUND EMAIL]   - recipientDomain === 'naeliv.com': ${recipientDomain === 'naeliv.com'}`);
+    
+    // Si c'est un alias système, rediriger vers l'admin
+    if (isSystemAlias && recipientDomain === 'naeliv.com') {
+      console.log(`📧 [INBOUND EMAIL] ✅✅✅ ALIAS SYSTÈME DÉTECTÉ ✅✅✅`);
+      console.log(`📧 [INBOUND EMAIL] Redirection: ${recipientEmail} -> ${SUPER_ADMIN_EMAIL}`);
+      
+      // Modifier le sujet pour ajouter un tag
+      const aliasTag = recipientUsername.toUpperCase();
+      modifiedSubject = `[${aliasTag}] ${sanitizedData.subject}`;
+      targetEmail = SUPER_ADMIN_EMAIL.toLowerCase().trim();
+      
+      console.log(`📧 [INBOUND EMAIL] Sujet modifié: "${modifiedSubject}"`);
+      console.log(`📧 [INBOUND EMAIL] Email cible final: ${targetEmail}`);
+    } else {
+      console.log(`📧 [INBOUND EMAIL] ℹ️  Email normal (non alias système): ${recipientEmail}`);
+      if (!isSystemAlias) {
+        console.log(`📧 [INBOUND EMAIL]   Raison: Username "${recipientUsername}" n'est pas dans SYSTEM_ALIASES`);
+      }
+      if (recipientDomain !== 'naeliv.com') {
+        console.log(`📧 [INBOUND EMAIL]   Raison: Domaine "${recipientDomain}" n'est pas "naeliv.com"`);
+      }
+    }
+    console.log(`📧 [INBOUND EMAIL] ============================================`);
+    
+    // Chercher l'utilisateur cible
+    console.log(`🔍 [INBOUND EMAIL] Recherche du profil pour: ${targetEmail}`);
+    let profile: any = null;
+    let profileError: any = null;
+    
+    const { data: profileData, error: profileErr } = await clientToUse
       .from('profiles')
       .select('id, email, plan')
-      .eq('email', sanitizedData.to)
+      .eq('email', targetEmail)
       .single();
     
+    profile = profileData;
+    profileError = profileErr;
+    
     if (profileError || !profile) {
-      console.error('❌ [INBOUND EMAIL] User not found for email:', sanitizedData.to);
-      console.error('❌ [INBOUND EMAIL] Profile error:', profileError);
-      console.error('❌ [INBOUND EMAIL] Using admin client:', !!supabaseAdmin);
+      console.error('❌ [INBOUND EMAIL] ============================================');
+      console.error('❌ [INBOUND EMAIL] PROBLÈME: Profil non trouvé');
+      console.error('❌ [INBOUND EMAIL] Email recherché:', targetEmail);
+      console.error('❌ [INBOUND EMAIL] Email original (destinataire):', sanitizedData.to);
+      console.error('❌ [INBOUND EMAIL] Est alias système:', isSystemAlias);
+      console.error('❌ [INBOUND EMAIL] Erreur profil:', profileError);
+      console.error('❌ [INBOUND EMAIL] Utilisation client admin:', !!supabaseAdmin);
       
       // Vérifier si l'utilisateur existe dans auth.users (peut-être que le profil n'a pas été créé)
       if (supabaseAdmin) {
-        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-        const userExists = authUsers?.users?.find((u: any) => u.email === sanitizedData.to);
-        console.log('❌ [INBOUND EMAIL] User in auth.users:', userExists ? 'EXISTS' : 'NOT FOUND');
-        if (userExists && !authError) {
-          console.log('⚠️ [INBOUND EMAIL] User exists in auth.users but not in profiles table!');
+        try {
+          const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+          const userExists = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase());
+          console.error('❌ [INBOUND EMAIL] Utilisateur dans auth.users:', userExists ? 'EXISTE ✅' : 'NON TROUVÉ ❌');
+          
+          if (userExists && !authError) {
+            console.error('⚠️ [INBOUND EMAIL] ⚠️  ATTENTION: L\'utilisateur existe dans auth.users mais PAS dans profiles!');
+            console.error('⚠️ [INBOUND EMAIL] ID utilisateur:', userExists.id);
+            console.error('⚠️ [INBOUND EMAIL] Email utilisateur:', userExists.email);
+            
+            // Essayer de créer le profil manquant
+            try {
+              const username = targetEmail.split('@')[0];
+              const { data: newProfile, error: createError } = await supabaseAdmin
+                .from('profiles')
+                .insert({
+                  id: userExists.id,
+                  email: targetEmail,
+                  username: username,
+                  plan: 'pro', // Par défaut pour gabi@naeliv.com
+                })
+                .select()
+                .single();
+              
+              if (!createError && newProfile) {
+                console.log('✅ [INBOUND EMAIL] Profil créé automatiquement pour:', targetEmail);
+                // Utiliser le profil créé
+                profile = newProfile;
+                profileError = null;
+                console.log('✅ [INBOUND EMAIL] Profil trouvé après création automatique');
+              } else {
+                console.error('❌ [INBOUND EMAIL] Erreur lors de la création du profil:', createError);
+              }
+            } catch (createErr: any) {
+              console.error('❌ [INBOUND EMAIL] Exception lors de la création du profil:', createErr);
+            }
+          } else if (!userExists) {
+            console.error('❌ [INBOUND EMAIL] L\'utilisateur n\'existe même pas dans auth.users!');
+          }
+        } catch (authErr: any) {
+          console.error('❌ [INBOUND EMAIL] Erreur lors de la vérification auth.users:', authErr);
         }
       }
       
-      // Ne pas révéler que l'utilisateur n'existe pas (sécurité)
-      // Mais on logue pour le débogage
-      return NextResponse.json(
-        { success: true, message: 'Email processed' },
-        { status: 200 }
-      );
+      // Si le profil n'a toujours pas été trouvé ou créé, retourner une erreur
+      if (!profile) {
+        console.error('❌ [INBOUND EMAIL] ============================================');
+        // Ne pas révéler que l'utilisateur n'existe pas (sécurité)
+        // Mais on logue pour le débogage
+        return NextResponse.json(
+          { success: true, message: 'Email processed' },
+          { status: 200 }
+        );
+      }
     }
 
-    console.log(`✅ [INBOUND EMAIL] User found: ${profile.email} (ID: ${profile.id})`);
+    console.log(`✅ [INBOUND EMAIL] User found: ${profile.email} (ID: ${profile.id})${isSystemAlias ? ' (via alias système)' : ''}`);
 
     // 12.5. Vérification du pare-feu (blocked_domains et whitelisted_senders)
     // Récupérer les paramètres du pare-feu depuis le profil (utiliser admin pour contourner RLS)
@@ -408,7 +526,7 @@ export async function POST(request: NextRequest) {
           user_id: profile.id,
           from_email: sanitizedData.fromEmail,
           from_name: sanitizedData.fromName,
-          subject: sanitizedData.subject,
+          subject: modifiedSubject, // Utiliser le sujet modifié (avec tag si alias système)
           body: sanitizedData.textBody,
           body_html: sanitizedData.htmlBody,
           preview: sanitizedData.preview,
@@ -435,7 +553,7 @@ export async function POST(request: NextRequest) {
         p_user_id: profile.id,
         p_from_email: sanitizedData.fromEmail,
         p_from_name: sanitizedData.fromName,
-        p_subject: sanitizedData.subject,
+        p_subject: modifiedSubject, // Utiliser le sujet modifié (avec tag si alias système)
         p_body: sanitizedData.textBody,
         p_body_html: sanitizedData.htmlBody,
         p_preview: sanitizedData.preview,
@@ -482,7 +600,9 @@ export async function POST(request: NextRequest) {
       userEmail: profile.email,
       from: sanitizedData.fromEmail,
       to: sanitizedData.to,
-      subject: sanitizedData.subject.substring(0, 50),
+      targetEmail: targetEmail,
+      isSystemAlias: isSystemAlias,
+      subject: modifiedSubject.substring(0, 50),
       spamScore: spamCheck.score,
       processingTime: `${processingTime}ms`,
       ip: clientIp,
