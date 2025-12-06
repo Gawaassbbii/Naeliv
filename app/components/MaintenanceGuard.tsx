@@ -44,6 +44,13 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
         // Vérifier le cookie bêta d'abord (c'est la clé pour l'accès en maintenance)
         const betaAccess = hasBetaAccess();
         setHasBeta(betaAccess);
+        
+        // Debug: Afficher tous les cookies pour vérification
+        if (typeof document !== 'undefined') {
+          console.log('🔍 [MaintenanceGuard] Tous les cookies:', document.cookie);
+          const betaCookie = document.cookie.split(';').find(c => c.trim().startsWith('naeliv_beta_access='));
+          console.log('🔍 [MaintenanceGuard] Cookie bêta trouvé:', betaCookie);
+        }
         console.log('🔍 [MaintenanceGuard] Cookie bêta vérifié:', betaAccess);
 
         // Vérifier l'utilisateur actuel - utiliser getSession d'abord pour une détection plus rapide
