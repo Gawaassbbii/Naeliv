@@ -209,6 +209,10 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-orange-500 text-white px-4 py-2 text-center text-[14px] font-medium z-50 sticky top-0 shadow-md"
+          style={{
+            // Définir une variable CSS pour la hauteur de la bannière
+            '--maintenance-banner-height': '40px'
+          } as React.CSSProperties}
         >
           ⚠️ Mode Maintenance Actif - {isAdmin ? "Seul l'admin peut accéder au site" : "Accès Bêta activé"}
         </motion.div>

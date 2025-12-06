@@ -1033,13 +1033,51 @@ function MailPageContent() {
     }
   }, [theme]);
   
+  // Calculer la hauteur disponible en tenant compte de la bannière de maintenance
+  const [availableHeight, setAvailableHeight] = useState('100vh');
+  
+  useEffect(() => {
+    const updateHeight = () => {
+      // Vérifier si la bannière de maintenance est présente
+      const maintenanceBanner = document.querySelector('[class*="bg-orange-500"][class*="sticky"]');
+      if (maintenanceBanner) {
+        const bannerHeight = maintenanceBanner.getBoundingClientRect().height;
+        setAvailableHeight(`calc(100vh - ${bannerHeight}px)`);
+      } else {
+        setAvailableHeight('100vh');
+      }
+    };
+    
+    // Mettre à jour immédiatement
+    updateHeight();
+    
+    // Réécouter les changements de taille de la bannière
+    const resizeObserver = new ResizeObserver(updateHeight);
+    const banner = document.querySelector('[class*="bg-orange-500"][class*="sticky"]');
+    if (banner) {
+      resizeObserver.observe(banner);
+    }
+    
+    // Écouter aussi les changements de taille de la fenêtre
+    window.addEventListener('resize', updateHeight);
+    
+    // Vérifier périodiquement au cas où la bannière apparaîtrait après le montage
+    const interval = setInterval(updateHeight, 500);
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeight);
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <div 
-      className="h-screen overflow-hidden overflow-x-hidden flex flex-col transition-colors max-w-full"
+      className="overflow-hidden overflow-x-hidden flex flex-col transition-colors max-w-full"
       style={{
         backgroundColor: theme === 'dark' ? '#111827' : '#ffffff',
         color: theme === 'dark' ? '#f3f4f6' : '#111827',
-        height: '100vh',
+        height: availableHeight,
         width: '100vw',
         maxWidth: '100vw'
       }}
