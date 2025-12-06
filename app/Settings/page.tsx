@@ -775,7 +775,7 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                             className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full hover:opacity-90 transition-opacity"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => onNavigate('pricing')}
+                            onClick={() => handleNavigate('pricing')}
                           >
                             Passer à PRO
                           </motion.button>
@@ -1238,7 +1238,7 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                           className="w-full px-6 py-3 bg-black text-white rounded-full hover:bg-gray-800 transition-colors"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          onClick={() => onNavigate('pricing')}
+                          onClick={() => handleNavigate('pricing')}
                         >
                           Passer à Naeliv PRO
                         </motion.button>
