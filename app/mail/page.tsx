@@ -4757,31 +4757,35 @@ function SettingsPanel({
                         <>
                           <div className="flex items-center gap-2">
                             <Check size={18} className="text-green-500 flex-shrink-0" />
-                            <span className="text-[14px] text-gray-700">Adresse @naeliv.com</span>
+                            <span className="text-[14px] text-gray-700">pseudo123@naeliv.com</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Check size={18} className="text-green-500 flex-shrink-0" />
-                            <span className="text-[14px] text-gray-700">Stockage de base</span>
+                            <span className="text-[14px] text-gray-700">5 Go de stockage</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Check size={18} className="text-green-500 flex-shrink-0" />
-                            <span className="text-[14px] text-gray-700">Zen Mode limité</span>
+                            <span className="text-[14px] text-gray-700">Zen Mode fixe (09h00 & 17h00)</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[18px] text-gray-400 flex-shrink-0">✗</span>
-                            <span className="text-[14px] text-gray-500">Smart Paywall (Premium Shield) - PRO uniquement</span>
+                            <Check size={18} className="text-green-500 flex-shrink-0" />
+                            <span className="text-[14px] text-gray-700">Smart Paywall (0,10€ par défaut)</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[18px] text-gray-400 flex-shrink-0">✗</span>
-                            <span className="text-[14px] text-gray-500">Immersion Linguistique - PRO uniquement</span>
+                            <Check size={18} className="text-green-500 flex-shrink-0" />
+                            <span className="text-[14px] text-gray-700">Immersion Linguistique (Anglais)</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[18px] text-gray-400 flex-shrink-0">✗</span>
-                            <span className="text-[14px] text-gray-500">Rewind illimité - PRO uniquement</span>
+                            <Check size={18} className="text-green-500 flex-shrink-0" />
+                            <span className="text-[14px] text-gray-700">Rewind Digital (annulation 10 secondes)</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[18px] text-gray-400 flex-shrink-0">✗</span>
-                            <span className="text-[14px] text-gray-500">Détox Digitale - PRO uniquement</span>
+                            <Check size={18} className="text-green-500 flex-shrink-0" />
+                            <span className="text-[14px] text-gray-700">Détox Digitale (conservation des emails)</span>
+                          </div>
+                          <div className="flex items-center gap-2 opacity-50">
+                            <Check size={18} className="text-gray-400 flex-shrink-0" />
+                            <span className="text-[14px] line-through text-gray-400">Naeliv Intelligence</span>
                           </div>
                         </>
                       )}
