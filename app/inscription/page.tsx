@@ -225,7 +225,8 @@ export default function Inscription() {
   };
 
   // Afficher le message de maintenance si activé
-  if (checkingMaintenance) {
+  // Vérification de maintenance supprimée - MaintenanceGuard s'en occupe
+  if (false) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
