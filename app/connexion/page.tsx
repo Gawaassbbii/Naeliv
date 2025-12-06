@@ -100,23 +100,6 @@ export default function Connexion() {
   const [loading, setLoading] = useState(false);
   const [showRemoveOption, setShowRemoveOption] = useState(false);
 
-  // Vérifier le statut de maintenance
-  useEffect(() => {
-    const checkMaintenance = async () => {
-      try {
-        const response = await fetch('/api/maintenance');
-        const data = await response.json();
-        setMaintenanceMode(data.enabled === true);
-      } catch (error) {
-        console.error('Erreur vérification maintenance:', error);
-        setMaintenanceMode(false);
-      } finally {
-        setCheckingMaintenance(false);
-      }
-    };
-    checkMaintenance();
-  }, []);
-
   // Charger les comptes sauvegardés au montage
   useEffect(() => {
     const accounts = getSavedAccounts();
