@@ -455,6 +455,9 @@ function MailPageContent() {
       case 'inbox':
         // Inbox: not archived, not deleted, and folder is NOT 'sent' (to exclude sent emails)
         query = query.eq('archived', false).eq('deleted', false).neq('folder', 'sent');
+        // Smart Paywall: Exclude emails in quarantine (status = 'quarantine')
+        // Support rétrocompatibilité : emails sans status ou avec status = 'inbox'
+        query = query.or('status.neq.quarantine,status.is.null');
         // Zen Mode: Only show emails whose visible_at is <= now (emails that should be visible)
         query = query.lte('visible_at', new Date().toISOString());
         break;
@@ -3732,6 +3735,7 @@ function SettingsPanel({
   const [rewind, setRewind] = useState(true);
   const [stampPrice, setStampPrice] = useState(0.10);
   const [rewindDelay, setRewindDelay] = useState('30');
+  const [creditsBalance, setCreditsBalance] = useState(0);
   const [activeSection, setActiveSection] = useState<'compte' | 'fonctionnalites' | 'notifications' | 'affichage' | 'securite' | 'abonnement' | 'parefeu'>('fonctionnalites');
   const t = translations[language];
   
@@ -3748,7 +3752,7 @@ function SettingsPanel({
       const loadProfile = async () => {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('first_name, last_name, avatar_url')
+          .select('first_name, last_name, avatar_url, credits_balance, paywall_price')
           .eq('id', user.id)
           .single();
         
@@ -3756,9 +3760,32 @@ function SettingsPanel({
           setFirstName(profile.first_name || '');
           setLastName(profile.last_name || '');
           setAvatarUrl(profile.avatar_url || null);
+          setCreditsBalance((profile.credits_balance || 0) / 100); // Convertir centimes en euros
+          if (profile.paywall_price) {
+            setStampPrice((profile.paywall_price || 10) / 100); // Convertir centimes en euros
+          }
         }
       };
       loadProfile();
+      
+      // Écouter les changements de credits_balance en temps réel
+      const creditsChannel = supabase
+        .channel('credits-updates')
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        }, (payload) => {
+          if (payload.new.credits_balance !== undefined) {
+            setCreditsBalance((payload.new.credits_balance as number) / 100);
+          }
+        })
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(creditsChannel);
+      };
     }
   }, [user?.id]);
   
@@ -4176,102 +4203,31 @@ function SettingsPanel({
                     price={stampPrice}
                     onPriceChange={setStampPrice}
                     userPlan={userPlan}
+                    creditsBalance={creditsBalance}
                   />
 
-                  {/* Immersion Linguistique - Disponible pour tous, mais langues limitées pour Essential */}
+                  {/* Immersion Linguistique - Fonctionnalité à venir */}
                   <FeatureCard
                     icon={Globe}
                     iconColor="text-blue-600"
                     name="Immersion Linguistique"
-                    description={userPlan === 'pro' ? "Traduisez automatiquement vos emails entrants" : "Traduisez automatiquement vos emails entrants (Anglais uniquement avec Essential)"}
-                    enabled={immersion}
-                    onToggle={() => setImmersion(!immersion)}
-                    additionalSettings={
-                      immersion && (
-                        <div className="mt-4">
-                          <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Langue de traduction
-                          </label>
-                          <select
-                            value={userPlan === 'essential' ? 'en' : immersionLanguage}
-                            onChange={(e) => {
-                              if (userPlan === 'essential') {
-                                // Les Essential ne peuvent choisir que l'anglais
-                                setImmersionLanguage('en');
-                              } else {
-                                setImmersionLanguage(e.target.value as 'en' | 'de' | 'fr' | 'nl' | 'all');
-                              }
-                            }}
-                            disabled={userPlan === 'essential'}
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {userPlan === 'pro' ? (
-                              <>
-                                <option value="en">Anglais (EN)</option>
-                                <option value="de">Allemand (DE)</option>
-                                <option value="fr">Français (FR)</option>
-                                <option value="nl">Néerlandais (NL)</option>
-                                <option value="all">Toutes les langues</option>
-                              </>
-                            ) : (
-                              <option value="en">Anglais (EN) - Limité avec Essential</option>
-                            )}
-                          </select>
-                          {userPlan === 'essential' && (
-                            <p className="text-[12px] text-purple-600 dark:text-purple-400 mt-2">
-                              Passer à PRO pour accéder à toutes les langues
-                            </p>
-                          )}
-                        </div>
-                      )
-                    }
+                    description="Traduisez automatiquement vos emails entrants"
+                    enabled={false}
+                    onToggle={() => {}}
+                    disabled={true}
+                    disabledMessage="Fonctionnalité à venir"
                   />
 
-                  {/* Rewind - Disponible pour tous, mais délais limités pour Essential */}
+                  {/* Rewind - Fonctionnalité à venir */}
                   <FeatureCard
                     icon={RotateCcw}
                     iconColor="text-orange-600"
                     name="Rewind"
-                    description={userPlan === 'pro' ? "Annulez l'envoi d'un email dans les secondes suivantes" : "Annulez l'envoi d'un email (10 secondes avec Essential)"}
-                    enabled={rewind}
-                    onToggle={() => setRewind(!rewind)}
-                    additionalSettings={
-                      rewind && (
-                        <div className="mt-4">
-                          <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Délai d'annulation (secondes)
-                          </label>
-                          <select
-                            value={rewindDelay}
-                            onChange={(e) => {
-                              const newValue = e.target.value;
-                              // Limiter les Essential à 10 secondes uniquement
-                              if (userPlan === 'essential' && newValue !== '10') {
-                                return;
-                              }
-                              setRewindDelay(newValue);
-                            }}
-                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white"
-                          >
-                            {userPlan === 'essential' ? (
-                              <option value="10">10 secondes</option>
-                            ) : (
-                              <>
-                                <option value="10">10 secondes</option>
-                                <option value="20">20 secondes</option>
-                                <option value="30">30 secondes</option>
-                                <option value="60">60 secondes</option>
-                              </>
-                            )}
-                          </select>
-                          {userPlan === 'essential' && (
-                            <p className="text-[12px] text-purple-600 dark:text-purple-400 mt-2">
-                              Passer à PRO pour accéder à 24 heures
-                            </p>
-                          )}
-                        </div>
-                      )
-                    }
+                    description="Annulez l'envoi d'un email dans les secondes suivantes"
+                    enabled={false}
+                    onToggle={() => {}}
+                    disabled={true}
+                    disabledMessage="Fonctionnalité à venir"
                   />
                 </div>
               </div>
@@ -5377,9 +5333,10 @@ interface SmartPaywallCardProps {
   price: number;
   onPriceChange: (price: number) => void;
   userPlan: 'essential' | 'pro';
+  creditsBalance: number;
 }
 
-function SmartPaywallCard({ enabled, onToggle, price, onPriceChange, userPlan }: SmartPaywallCardProps) {
+function SmartPaywallCard({ enabled, onToggle, price, onPriceChange, userPlan, creditsBalance }: SmartPaywallCardProps) {
   const commissionRate = 0.01; // 1% commission
   const estimatedEmailsPerMonth = 30;
   const estimatedRevenue = price * estimatedEmailsPerMonth * commissionRate;
@@ -5406,6 +5363,23 @@ function SmartPaywallCard({ enabled, onToggle, price, onPriceChange, userPlan }:
         <p className="text-[14px] text-gray-700 dark:text-gray-300 flex items-center gap-1">
           👋 Vous touchez 1% de commission sur chaque email reçu
         </p>
+      </div>
+
+      {/* Credits Balance */}
+      <div className="mb-6 p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200 dark:border-green-800">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[12px] text-gray-600 dark:text-gray-400 mb-1">Vos gains disponibles</p>
+            <p className="text-[32px] font-bold text-green-600 dark:text-green-400">
+              {creditsBalance.toFixed(2)}€
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[12px] text-gray-600 dark:text-gray-400">
+              Utilisez ces crédits pour payer votre abonnement Naeliv PRO
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Price Slider - Only for PRO users */}

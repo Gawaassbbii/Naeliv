@@ -77,6 +77,103 @@ export async function POST(request: NextRequest) {
           break;
         }
 
+        // Si c'est un paiement de timbre Smart Paywall
+        if (productType === 'paywall_stamp' && session.payment_status === 'paid') {
+          const emailId = session.metadata?.email_id;
+          const recipientUserId = session.metadata?.recipient_user_id;
+          const senderEmail = session.metadata?.sender_email;
+          const amountTotal = session.amount_total || 0; // Montant en centimes
+
+          if (!emailId || !recipientUserId || !senderEmail) {
+            console.error('❌ [STRIPE WEBHOOK] Métadonnées manquantes pour paywall_stamp:', { emailId, recipientUserId, senderEmail });
+            break;
+          }
+
+          console.log(`💰 [STRIPE WEBHOOK] Paiement de timbre détecté - Email: ${emailId}, Montant: ${amountTotal / 100}€`);
+
+          // Action 1 : Libérer l'email (passer de 'quarantine' à 'inbox')
+          const { error: emailError } = await supabaseAdmin
+            .from('emails')
+            .update({ 
+              status: 'inbox',
+              has_paid_stamp: true
+            })
+            .eq('id', emailId);
+
+          if (emailError) {
+            console.error('❌ [STRIPE WEBHOOK] Erreur lors de la libération de l\'email:', emailError);
+          } else {
+            console.log(`✅ [STRIPE WEBHOOK] Email ${emailId} libéré et ajouté à la boîte de réception`);
+          }
+
+          // Action 2 : Ajouter l'expéditeur à la whitelist (whitelisted_senders)
+          const { data: currentProfile } = await supabaseAdmin
+            .from('profiles')
+            .select('whitelisted_senders')
+            .eq('id', recipientUserId)
+            .single();
+
+          const currentWhitelist = currentProfile?.whitelisted_senders || [];
+          if (!currentWhitelist.includes(senderEmail)) {
+            const updatedWhitelist = [...currentWhitelist, senderEmail];
+            const { error: whitelistError } = await supabaseAdmin
+              .from('profiles')
+              .update({ whitelisted_senders: updatedWhitelist })
+              .eq('id', recipientUserId);
+
+            if (whitelistError) {
+              console.error('❌ [STRIPE WEBHOOK] Erreur lors de l\'ajout à la whitelist:', whitelistError);
+            } else {
+              console.log(`✅ [STRIPE WEBHOOK] ${senderEmail} ajouté à la whitelist de ${recipientUserId}`);
+            }
+          }
+
+          // Action 3 : Ajouter la commission (1%) au solde de crédits du destinataire
+          const commission = Math.floor(amountTotal * 0.01); // 1% en centimes
+          if (commission > 0) {
+            // Récupérer le solde actuel et l'incrémenter
+            const { data: profileBalance } = await supabaseAdmin
+              .from('profiles')
+              .select('credits_balance')
+              .eq('id', recipientUserId)
+              .single();
+
+            if (profileBalance) {
+              const newBalance = (profileBalance.credits_balance || 0) + commission;
+              const { error: updateError } = await supabaseAdmin
+                .from('profiles')
+                .update({ credits_balance: newBalance })
+                .eq('id', recipientUserId);
+
+              if (updateError) {
+                console.error('❌ [STRIPE WEBHOOK] Erreur lors de la mise à jour du solde:', updateError);
+              } else {
+                console.log(`✅ [STRIPE WEBHOOK] Commission de ${commission / 100}€ ajoutée au solde de ${recipientUserId} (nouveau solde: ${newBalance / 100}€)`);
+              }
+            }
+
+            // Enregistrer la transaction
+            const { error: transactionError } = await supabaseAdmin
+              .from('transactions')
+              .insert({
+                user_id: recipientUserId,
+                amount: commission,
+                source: 'paywall_commission',
+                description: `Commission Smart Paywall - Email de ${senderEmail}`,
+                stripe_payment_intent_id: session.payment_intent as string,
+                email_id: emailId,
+              });
+
+            if (transactionError) {
+              console.error('❌ [STRIPE WEBHOOK] Erreur lors de l\'enregistrement de la transaction:', transactionError);
+            } else {
+              console.log(`✅ [STRIPE WEBHOOK] Transaction enregistrée: ${commission / 100}€ de commission`);
+            }
+          }
+
+          break;
+        }
+
         // Si c'est un achat d'alias (one-time payment)
         if (productType === 'alias' && session.payment_status === 'paid') {
           console.log('✅ [STRIPE WEBHOOK] Achat d\'alias détecté pour user:', userId);

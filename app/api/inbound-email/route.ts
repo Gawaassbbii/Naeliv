@@ -513,19 +513,54 @@ export async function POST(request: NextRequest) {
       console.log(`⚠️ [FIREWALL] Pas de paramètres de pare-feu trouvés ou erreur, email autorisé par défaut`);
     }
 
-    // 13. Vérifier si l'expéditeur est dans les contacts (pour Premium Shield)
+    // 13. Smart Paywall - Vérifier si l'expéditeur est autorisé
+    // Récupérer les paramètres du Smart Paywall
+    const { data: paywallProfile, error: paywallError } = await (supabaseAdmin || clientToUse)
+      .from('profiles')
+      .select('paywall_enabled, paywall_price, whitelisted_senders')
+      .eq('id', profile.id)
+      .single();
+
+    const paywallEnabled = paywallProfile?.paywall_enabled === true;
+    const paywallPrice = paywallProfile?.paywall_price || 10; // Par défaut 0,10€
+    const whitelistedSenders = paywallProfile?.whitelisted_senders || [];
+
+    // Extraire l'email de l'expéditeur
+    let senderEmailRaw = sanitizedData.fromEmail.trim();
+    const emailMatch = senderEmailRaw.match(/<(.+?)>/);
+    if (emailMatch) {
+      senderEmailRaw = emailMatch[1];
+    }
+    const senderEmail = senderEmailRaw.toLowerCase().trim();
+
+    // Vérifier si l'expéditeur est dans les contacts de confiance
     const { data: contact } = await supabase
       .from('contacts')
       .select('is_trusted')
       .eq('user_id', profile.id)
-      .eq('email', sanitizedData.fromEmail)
+      .eq('email', senderEmail)
       .single();
     
     const isTrusted = !!contact?.is_trusted;
+    const isWhitelisted = whitelistedSenders.includes(senderEmail);
+    const isAuthorized = isTrusted || isWhitelisted;
 
-    // 14. Vérifier si l'utilisateur a Premium Shield activé et si l'expéditeur a payé
-    // TODO: Implémenter la logique de paiement du timbre ici
-    const hasPaidStamp = !isTrusted && false; // À implémenter selon votre logique
+    // 14. Appliquer le Smart Paywall si activé
+    let emailStatus = 'inbox'; // Par défaut : email autorisé
+    let hasPaidStamp = false;
+    let paymentUrl: string | null = null;
+
+    if (paywallEnabled && !isAuthorized) {
+      // L'expéditeur est un inconnu, le mettre en quarantaine
+      emailStatus = 'quarantine';
+      console.log(`🔒 [SMART PAYWALL] Email mis en quarantaine - Expéditeur inconnu: ${senderEmail}`);
+      
+      // Note: Le paiement sera géré après l'insertion de l'email pour avoir l'ID
+      // On marquera hasPaidStamp = false pour l'instant
+    } else {
+      // Email autorisé (contact de confiance ou paywall désactivé)
+      hasPaidStamp = isAuthorized;
+    }
 
     // 14.5. Smart Sorter - Catégorisation IA pour les membres PRO
     let emailCategory: string | null = null;
@@ -629,6 +664,7 @@ export async function POST(request: NextRequest) {
           preview: sanitizedData.preview,
           received_at: new Date().toISOString(),
           visible_at: visibleAt.toISOString(), // Date de visibilité selon Zen Mode
+          status: emailStatus, // Status selon Smart Paywall ('inbox' ou 'quarantine')
           has_paid_stamp: hasPaidStamp,
           archived: false,
           deleted: false,
@@ -694,6 +730,80 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to store email', details: emailError.message },
         { status: 500 }
       );
+    }
+
+    // 15.5. Smart Paywall - Créer session Stripe et envoyer email si en quarantine
+    if (emailStatus === 'quarantine' && email?.id) {
+      try {
+        // Créer une session Stripe Checkout pour le paiement
+        const stripeKey = process.env.STRIPE_SECRET_KEY;
+        if (stripeKey) {
+          const Stripe = (await import('stripe')).default;
+          const stripe = new Stripe(stripeKey, {
+            apiVersion: '2025-11-17.clover',
+          });
+
+          const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+              {
+                price_data: {
+                  currency: 'eur',
+                  product_data: {
+                    name: 'Timbre de sécurité Naeliv',
+                    description: `Paiement pour délivrer votre email à ${profile.email}`,
+                  },
+                  unit_amount: paywallPrice,
+                },
+                quantity: 1,
+              },
+            ],
+            mode: 'payment',
+            success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://naeliv.com'}/paywall-success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://naeliv.com'}/paywall-cancel`,
+            metadata: {
+              email_id: email.id,
+              recipient_user_id: profile.id,
+              sender_email: senderEmail,
+              productType: 'paywall_stamp',
+            },
+          });
+
+          paymentUrl = session.url;
+          console.log(`🔒 [SMART PAYWALL] Session Stripe créée pour email ${email.id}: ${session.id}`);
+
+          // Envoyer un email automatique à l'expéditeur
+          if (resend) {
+            const stampPriceEur = (paywallPrice / 100).toFixed(2);
+            await resend.emails.send({
+              from: 'Naeliv <noreply@naeliv.com>',
+              to: senderEmail,
+              subject: `Action requise : Votre email à ${profile.email} est en attente`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2>Bonjour,</h2>
+                  <p>${profile.email} utilise <strong>Naeliv</strong>, un service de messagerie qui protège contre le spam.</p>
+                  <p>Pour délivrer votre message, veuillez régler le timbre de sécurité de <strong>${stampPriceEur}€</strong> via ce lien sécurisé :</p>
+                  <p style="text-align: center; margin: 30px 0;">
+                    <a href="${paymentUrl}" style="background-color: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                      Payer le timbre de sécurité
+                    </a>
+                  </p>
+                  <p><strong>Une fois payé, vous serez ajouté à la liste verte</strong> et n'aurez plus besoin de payer pour vos prochains messages.</p>
+                  <p>Cordialement,<br>L'équipe Naeliv</p>
+                </div>
+              `,
+              text: `Bonjour,\n\n${profile.email} utilise Naeliv, un service de messagerie qui protège contre le spam.\n\nPour délivrer votre message, veuillez régler le timbre de sécurité de ${stampPriceEur}€ via ce lien sécurisé :\n\n${paymentUrl}\n\nUne fois payé, vous serez ajouté à la liste verte et n'aurez plus besoin de payer pour vos prochains messages.\n\nCordialement,\nL'équipe Naeliv`,
+            });
+            console.log(`📧 [SMART PAYWALL] Email automatique envoyé à ${senderEmail}`);
+          }
+        } else {
+          console.warn('⚠️ [SMART PAYWALL] STRIPE_SECRET_KEY non configuré, impossible de créer la session de paiement');
+        }
+      } catch (paywallError: any) {
+        console.error('❌ [SMART PAYWALL] Erreur lors de la création de la session ou envoi de l\'email:', paywallError);
+        // Ne pas faire échouer l'insertion de l'email, juste logger l'erreur
+      }
     }
 
     // 16. Log de sécurité
