@@ -88,28 +88,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Préparer les données à insérer
+    // 5. Préparer les données à insérer (sans usage_count d'abord pour éviter l'erreur)
     const insertData: any = {
       code: newCode,
       note: note?.trim() || null,
-      is_active: true,
-      usage_count: 0
+      is_active: true
     };
+
+    // Ajouter usage_count seulement si la colonne existe
+    try {
+      const testUsageResult = await supabaseAdmin
+        .from('beta_codes')
+        .select('usage_count')
+        .limit(1);
+      
+      if (!testUsageResult.error) {
+        insertData.usage_count = 0;
+      }
+    } catch (err) {
+      console.log('ℹ️ [BETA CODE] Colonne usage_count non disponible');
+    }
 
     // Ajouter created_by si la colonne existe
     try {
-      // Vérifier si la colonne created_by existe en essayant une requête de test
-      const testResult = await supabaseAdmin
+      const testCreatedByResult = await supabaseAdmin
         .from('beta_codes')
         .select('created_by')
         .limit(1);
       
-      // Si pas d'erreur, la colonne existe
-      if (!testResult.error) {
+      if (!testCreatedByResult.error) {
         insertData.created_by = user.id;
       }
     } catch (err) {
-      // Colonne n'existe pas, continuer sans created_by
       console.log('ℹ️ [BETA CODE] Colonne created_by non disponible');
     }
 
