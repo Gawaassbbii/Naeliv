@@ -82,98 +82,36 @@ export default function AdminBetaPage() {
   };
 
   const handleGenerateCode = async () => {
-    if (!newCodeNote.trim()) {
-      toast.error('Veuillez entrer une note pour le code');
-      return;
-    }
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // Récupérer le token de session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
         toast.error('Utilisateur non connecté');
         return;
       }
 
-      const newCode = generateCode();
-      
-      // Préparer les données à insérer
-      const insertData: any = {
-        code: newCode,
-        note: newCodeNote.trim(),
-        is_active: true,
-        usage_count: 0
-      };
+      // Appeler l'API pour générer le code
+      const response = await fetch('/api/beta/generate-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          note: newCodeNote.trim() || null
+        })
+      });
 
-      // Essayer d'abord avec created_by, puis sans si la colonne n'existe pas
-      let data, error;
-      
-      try {
-        const result = await supabase
-          .from('beta_codes')
-          .insert({
-            ...insertData,
-            created_by: user.id
-          })
-          .select()
-          .single();
-        
-        data = result.data;
-        error = result.error;
-      } catch (err: any) {
-        // Si l'erreur concerne created_by, réessayer sans
-        if (err.message && err.message.includes('created_by')) {
-          const result = await supabase
-            .from('beta_codes')
-            .insert(insertData)
-            .select()
-            .single();
-          
-          data = result.data;
-          error = result.error;
-        } else {
-          throw err;
-        }
-      }
+      const data = await response.json();
 
-      if (error) {
-        // Si l'erreur concerne created_by, réessayer sans cette colonne
-        if (error.message && error.message.includes('created_by')) {
-          const result = await supabase
-            .from('beta_codes')
-            .insert(insertData)
-            .select()
-            .single();
-          
-          if (result.error) {
-            console.error('Erreur lors de la création du code:', result.error);
-            toast.error('Erreur lors de la création du code');
-            return;
-          }
-          
-          toast.success(`Code ${newCode} créé avec succès`);
-          setNewCodeNote('');
-          setShowGenerateModal(false);
-          fetchBetaCodes();
-          return;
-        }
-        
-        console.error('Erreur lors de la création du code:', error);
-        toast.error('Erreur lors de la création du code');
+      if (!response.ok) {
+        console.error('Erreur lors de la création du code:', data);
+        toast.error(data.error || 'Erreur lors de la création du code');
         return;
       }
 
-      toast.success(`Code ${newCode} créé avec succès`);
-      setNewCodeNote('');
-      setShowGenerateModal(false);
-      fetchBetaCodes();
-
-      if (error) {
-        console.error('Erreur lors de la création du code:', error);
-        toast.error('Erreur lors de la création du code');
-        return;
-      }
-
-      toast.success(`Code ${newCode} créé avec succès`);
+      toast.success(`Code ${data.code.code} créé avec succès`);
       setNewCodeNote('');
       setShowGenerateModal(false);
       fetchBetaCodes();
