@@ -33,7 +33,7 @@ export function PresenceTracker() {
 
         // S'abonner au channel D'ABORD
         channel.subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
+          if (status === 'SUBSCRIBED' && channel) {
             console.log('✅ [Presence] Abonné au channel online-users');
             
             // Ensuite, envoyer la présence après s'être abonné
