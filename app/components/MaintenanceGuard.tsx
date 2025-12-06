@@ -25,10 +25,14 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [hasBeta, setHasBeta] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
+    // Éviter les redirections multiples
+    if (redirecting) return;
+
     const checkMaintenance = async () => {
       try {
         // Vérifier le cookie bêta d'abord
@@ -73,19 +77,25 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
         // NOUVELLE RÈGLE : Si maintenance activée ET pas admin ET pas de cookie bêta, rediriger vers /maintenance
         if (maintenanceActive && !userIsAdmin && !betaAccess && pathname !== '/maintenance') {
           console.log('🚫 [MaintenanceGuard] Redirection vers /maintenance (non-admin, pas de beta)');
-          router.push('/maintenance');
+          setRedirecting(true);
+          router.replace('/maintenance');
+          return; // Arrêter l'exécution pour éviter les autres vérifications
         }
 
         // Si maintenance activée et admin est sur /maintenance, rediriger vers la page d'accueil
         if (maintenanceActive && userIsAdmin && pathname === '/maintenance') {
           console.log('✅ [MaintenanceGuard] Redirection vers / (admin sur maintenance)');
-          router.push('/');
+          setRedirecting(true);
+          router.replace('/');
+          return;
         }
 
         // Si maintenance activée et utilisateur a le cookie bêta, rediriger depuis /maintenance
         if (maintenanceActive && betaAccess && pathname === '/maintenance') {
           console.log('✅ [MaintenanceGuard] Redirection vers / (utilisateur avec accès bêta)');
-          router.push('/');
+          setRedirecting(true);
+          router.replace('/');
+          return;
         }
         
         // Si maintenance activée et admin, permettre l'accès complet (pas de redirection)
@@ -192,12 +202,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     if (pathname === '/maintenance') {
       return <>{children}</>; // Afficher la page de maintenance
     }
-    // Bloquer l'accès à toutes les autres pages et forcer la redirection
-    // Utiliser window.location.href pour une redirection immédiate côté client
-    if (typeof window !== 'undefined' && pathname !== '/maintenance') {
-      window.location.href = '/maintenance';
-    }
-    // Afficher un loader pendant la redirection
+    // Afficher un loader pendant la redirection (la redirection est gérée dans useEffect)
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
