@@ -99,8 +99,6 @@ export default function Connexion() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showRemoveOption, setShowRemoveOption] = useState(false);
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [checkingMaintenance, setCheckingMaintenance] = useState(true);
 
   // Vérifier le statut de maintenance
   useEffect(() => {
@@ -121,26 +119,17 @@ export default function Connexion() {
 
   // Charger les comptes sauvegardés au montage
   useEffect(() => {
-    if (!checkingMaintenance) {
-      const accounts = getSavedAccounts();
-      setSavedAccounts(accounts);
-      if (accounts.length === 0) {
-        setCurrentView('email-input');
-      }
+    const accounts = getSavedAccounts();
+    setSavedAccounts(accounts);
+    if (accounts.length === 0) {
+      setCurrentView('email-input');
     }
-  }, [checkingMaintenance]);
+  }, []);
 
   // Fonction de connexion
   const handleLogin = async (loginEmail: string, loginPassword: string) => {
     setError('');
     setLoading(true);
-
-    // Vérifier la maintenance avant de se connecter
-    if (maintenanceMode && loginEmail.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
-      setError('Le site est actuellement en maintenance. Veuillez réessayer plus tard.');
-      setLoading(false);
-      return;
-    }
 
     try {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -261,49 +250,6 @@ export default function Connexion() {
       setCurrentView('email-input');
     }
   };
-
-  // Afficher le message de maintenance si activé et que l'utilisateur n'est pas l'admin
-  const isAdminEmail = (currentView === 'password-input' && selectedEmail.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ||
-                       (currentView === 'email-input' && email.toLowerCase() === ADMIN_EMAIL.toLowerCase());
-
-  if (checkingMaintenance) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (maintenanceMode && !isAdminEmail && currentView !== 'password-input') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <motion.div
-          className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md w-full text-center"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="mb-6">
-            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h1 className="text-[28px] font-bold text-black mb-3">Maintenance en cours</h1>
-            <p className="text-[16px] text-gray-600">
-              Le site est actuellement en maintenance. Nous serons de retour très bientôt.
-            </p>
-            <p className="text-[14px] text-gray-500 mt-4">
-              Nous effectuons des mises à jour pour améliorer votre expérience.
-            </p>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">

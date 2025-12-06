@@ -22,25 +22,6 @@ export default function Inscription() {
   const [emailExistsError, setEmailExistsError] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [validationError, setValidationError] = useState<string>('');
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [checkingMaintenance, setCheckingMaintenance] = useState(true);
-
-  // Vérifier le statut de maintenance
-  useEffect(() => {
-    const checkMaintenance = async () => {
-      try {
-        const response = await fetch('/api/maintenance');
-        const data = await response.json();
-        setMaintenanceMode(data.enabled === true);
-      } catch (error) {
-        console.error('Erreur vérification maintenance:', error);
-        setMaintenanceMode(false);
-      } finally {
-        setCheckingMaintenance(false);
-      }
-    };
-    checkMaintenance();
-  }, []);
   
   // Fonction pour calculer la force du mot de passe
   const calculatePasswordStrength = (password: string): { strength: 'faible' | 'puissant' | 'très puissant', score: number } => {
@@ -75,12 +56,6 @@ export default function Inscription() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Vérifier la maintenance avant de continuer
-    if (maintenanceMode) {
-      setValidationError('Les inscriptions sont temporairement désactivées pendant la maintenance.');
-      return;
-    }
     
     console.log('🔵 [INSCRIPTION] handleSubmit appelé, step:', step);
     
@@ -257,43 +232,6 @@ export default function Inscription() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Chargement...</p>
         </div>
-      </div>
-    );
-  }
-
-  if (maintenanceMode) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-6">
-        <motion.div
-          className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md w-full text-center"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="mb-6">
-            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h1 className="text-[28px] font-bold text-black mb-3">Maintenance en cours</h1>
-            <p className="text-[16px] text-gray-600">
-              Les inscriptions sont temporairement désactivées pendant la maintenance.
-            </p>
-            <p className="text-[14px] text-gray-500 mt-4">
-              Nous effectuons des mises à jour pour améliorer votre expérience. Veuillez réessayer plus tard.
-            </p>
-          </div>
-          <Link href="/connexion">
-            <motion.button
-              className="px-6 py-3 bg-purple-600 text-white rounded-full text-[14px] font-medium hover:bg-purple-700 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Aller à la connexion
-            </motion.button>
-          </Link>
-        </motion.div>
       </div>
     );
   }
