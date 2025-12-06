@@ -170,6 +170,51 @@ export default function AdminBetaPage() {
     }
   };
 
+  const handlePurgeBetaTesters = async () => {
+    if (!confirm(`⚠️ ATTENTION : Cette action est irréversible !\n\nVous allez supprimer toutes les données des testeurs bêta (emails, contacts).\n\n${deleteAccounts ? 'Les comptes des testeurs seront également supprimés.' : 'Les comptes seront conservés mais leurs données seront effacées.'}\n\nÊtes-vous absolument sûr ?`)) {
+      return;
+    }
+
+    setPurging(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error('Utilisateur non connecté');
+        setPurging(false);
+        return;
+      }
+
+      const response = await fetch('/api/admin/purge-beta-testers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          delete_accounts: deleteAccounts
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || 'Erreur lors de la purge');
+        setPurging(false);
+        return;
+      }
+
+      toast.success(`Purge réussie : ${data.deleted_emails} emails, ${data.deleted_contacts} contacts supprimés${deleteAccounts ? `, ${data.deleted_accounts} comptes supprimés` : ''}`);
+      setShowPurgeModal(false);
+      setDeleteAccounts(false);
+    } catch (err: any) {
+      console.error('Erreur:', err);
+      toast.error('Une erreur est survenue');
+    } finally {
+      setPurging(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
