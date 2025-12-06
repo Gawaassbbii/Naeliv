@@ -66,7 +66,7 @@ export default function MaintenancePage() {
               filter: 'key=eq.maintenance_mode',
             },
             (payload) => {
-              const newValue = payload.new?.value === 'true';
+              const newValue = (payload.new as { value: string } | null)?.value === 'true';
               setMaintenanceEnabled(newValue);
             }
           )
