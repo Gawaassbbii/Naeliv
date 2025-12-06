@@ -23,17 +23,9 @@ const supabaseAdmin = supabaseUrl && supabaseServiceKey
  * 
  * Cette route essaie d'exécuter le SQL directement via l'API Management de Supabase
  */
-export async function POST(request: NextRequest) {
-  try {
-    if (!supabaseAdmin || !supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: 'Configuration serveur invalide' },
-        { status: 500 }
-      );
-    }
 
-    // SQL pour créer les politiques RLS
-    const rlsPoliciesSQL = `
+// SQL pour créer les politiques RLS
+const rlsPoliciesSQL = `
 -- 1. S'assurer que RLS est activé sur storage.objects
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
@@ -84,6 +76,15 @@ FOR SELECT
 TO public
 USING (bucket_id = 'avatars');
 `;
+
+export async function POST(request: NextRequest) {
+  try {
+    if (!supabaseAdmin || !supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json(
+        { error: 'Configuration serveur invalide' },
+        { status: 500 }
+      );
+    }
 
     // Utiliser le client Supabase admin pour appeler la fonction RPC
     // La fonction setup_avatars_rls_policies() doit être créée au préalable
