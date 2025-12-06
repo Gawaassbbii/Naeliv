@@ -6,6 +6,7 @@ import { EmailMockup } from './EmailMockup';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 interface HeroProps {
   onNavigate: (page: string) => void;
@@ -13,6 +14,25 @@ interface HeroProps {
 
 export function Hero({ onNavigate }: HeroProps) {
   const [emailName, setEmailName] = useState('');
+  const router = useRouter();
+
+  const handleCreateAddress = (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+    
+    // Nettoyer et valider le nom
+    const cleanName = emailName.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+    
+    // Validation : vérifier que le champ n'est pas vide
+    if (!cleanName || cleanName.length === 0) {
+      // Optionnel : afficher un message d'erreur ou simplement ne rien faire
+      return;
+    }
+    
+    // Rediriger vers la page d'inscription avec le paramètre email
+    router.push(`/inscription?email=${cleanName}@naeliv.com`);
+  };
 
   return (
     <header className="min-h-screen flex flex-col items-center justify-center px-6 py-8 border-b border-gray-300 relative overflow-hidden bg-white">
@@ -87,7 +107,8 @@ export function Hero({ onNavigate }: HeroProps) {
             </motion.div>
 
             {/* Email Creation CTA - HERO ELEMENT */}
-            <motion.div
+            <motion.form
+              onSubmit={handleCreateAddress}
               className="mb-8 p-6 bg-gradient-to-br from-blue-50 to-green-50 rounded-3xl border-2 border-black shadow-2xl"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -101,17 +122,27 @@ export function Hero({ onNavigate }: HeroProps) {
                 <input
                   type="text"
                   value={emailName}
-                  onChange={(e) => setEmailName(e.target.value)}
+                  onChange={(e) => {
+                    // Nettoyer automatiquement le nom (minuscules, caractères autorisés uniquement)
+                    const cleanValue = e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+                    setEmailName(cleanValue);
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCreateAddress(e as any);
+                    }
+                  }}
                   className="flex-1 px-4 py-3 text-[24px] border-2 border-black rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-300"
                   placeholder="votre_nom"
+                  required
                 />
                 <span className="text-[24px] text-gray-600">@naeliv.com</span>
               </div>
               <motion.button
+                type="submit"
                 className="w-full bg-black text-white py-4 rounded-xl flex items-center justify-center gap-3 text-[18px] group"
                 whileHover={{ scale: 1.03, backgroundColor: "#1f2937" }}
                 whileTap={{ scale: 0.97 }}
-                onClick={() => window.location.href = '/inscription'}
               >
                 Créer mon adresse
                 <motion.div
@@ -124,7 +155,7 @@ export function Hero({ onNavigate }: HeroProps) {
               <p className="text-[12px] text-center mt-3 text-gray-500">
                 Gratuit • Sans engagement • En 30 secondes
               </p>
-            </motion.div>
+            </motion.form>
 
             {/* Main CTA */}
             <motion.div 

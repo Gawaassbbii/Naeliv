@@ -3,22 +3,43 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ArrowRight, Mail, User, Lock, CreditCard, AlertCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { signupSchema, RESERVED_USERNAMES } from '@/lib/validations/auth';
 
 export default function Inscription() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState<'essential' | 'pro'>('essential');
+  
+  // Extraire le nom d'utilisateur depuis le paramètre URL email
+  const emailParam = searchParams.get('email');
+  const initialUsername = emailParam 
+    ? emailParam.replace('@naeliv.com', '').toLowerCase().replace(/[^a-z0-9._-]/g, '')
+    : '';
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    username: '',
+    username: initialUsername,
     password: '',
     confirmPassword: ''
   });
+
+  // Mettre à jour le username si le paramètre email change
+  useEffect(() => {
+    if (emailParam) {
+      const extractedUsername = emailParam.replace('@naeliv.com', '').toLowerCase().replace(/[^a-z0-9._-]/g, '');
+      if (extractedUsername && extractedUsername !== formData.username) {
+        setFormData(prev => ({
+          ...prev,
+          username: extractedUsername
+        }));
+      }
+    }
+  }, [emailParam]);
   const [emailExistsError, setEmailExistsError] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [validationError, setValidationError] = useState<string>('');
