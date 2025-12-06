@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
-import { Key, Plus, Trash2, Power, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Key, Plus, Trash2, Power, ArrowLeft, CheckCircle, XCircle, AlertTriangle, Trash } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -27,6 +27,9 @@ export default function AdminBetaPage() {
   const [error, setError] = useState<string | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [newCodeNote, setNewCodeNote] = useState('');
+  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [deleteAccounts, setDeleteAccounts] = useState(false);
+  const [purging, setPurging] = useState(false);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -223,6 +226,26 @@ export default function AdminBetaPage() {
           </div>
         )}
 
+        {/* Section Nettoyage - Danger Zone */}
+        <div className="mb-8 bg-red-50 border-2 border-red-300 rounded-2xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <AlertTriangle size={24} className="text-red-600" />
+            <h2 className="text-[24px] font-bold text-red-900">Zone de Danger - Nettoyage</h2>
+          </div>
+          <p className="text-[14px] text-red-800 mb-4">
+            Supprimez toutes les données des testeurs bêta (emails, contacts). Cette action est irréversible.
+          </p>
+          <motion.button
+            onClick={() => setShowPurgeModal(true)}
+            className="px-6 py-3 bg-red-600 text-white rounded-xl text-[14px] font-medium flex items-center gap-2 hover:bg-red-700 transition-colors shadow-lg"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Trash size={20} />
+            Purger les données de test
+          </motion.button>
+        </div>
+
         {/* Tableau des codes */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
           <div className="overflow-x-auto">
@@ -367,6 +390,78 @@ export default function AdminBetaPage() {
                   whileTap={{ scale: 0.98 }}
                 >
                   Générer le Code
+                </motion.button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Modal de purge */}
+        {showPurgeModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 relative border-2 border-red-300"
+            >
+              <button
+                onClick={() => {
+                  setShowPurgeModal(false);
+                  setDeleteAccounts(false);
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                disabled={purging}
+              >
+                <XCircle size={24} />
+              </button>
+
+              <div className="mb-6">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertTriangle size={32} className="text-red-600" />
+                </div>
+                <h2 className="text-[28px] font-bold text-center text-red-900 mb-2">
+                  Purger les données de test
+                </h2>
+                <p className="text-[14px] text-red-700 text-center">
+                  Cette action est irréversible
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <p className="text-[14px] text-red-800 mb-2">
+                    <strong>Données qui seront supprimées :</strong>
+                  </p>
+                  <ul className="text-[13px] text-red-700 space-y-1 list-disc list-inside">
+                    <li>Tous les emails envoyés/reçus par les testeurs bêta</li>
+                    <li>Tous les contacts créés par les testeurs bêta</li>
+                    {deleteAccounts && (
+                      <li className="font-bold">Les comptes des testeurs bêta seront également supprimés</li>
+                    )}
+                  </ul>
+                </div>
+
+                <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={deleteAccounts}
+                    onChange={(e) => setDeleteAccounts(e.target.checked)}
+                    className="w-5 h-5 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                    disabled={purging}
+                  />
+                  <span className="text-[14px] text-gray-700">
+                    Supprimer aussi les comptes des testeurs bêta
+                  </span>
+                </label>
+
+                <motion.button
+                  onClick={handlePurgeBetaTesters}
+                  disabled={purging}
+                  className="w-full py-3 bg-red-600 text-white rounded-xl text-[14px] font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: purging ? 1 : 1.02 }}
+                  whileTap={{ scale: purging ? 1 : 0.98 }}
+                >
+                  {purging ? 'Purge en cours...' : 'Confirmer la purge'}
                 </motion.button>
               </div>
             </motion.div>

@@ -19,7 +19,9 @@ import {
   LogOut,
   AlertTriangle,
   Settings as SettingsIcon,
-  Users
+  Users,
+  Gem,
+  Coins
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -753,8 +755,9 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                             <div className="px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-center">09:00</div>
                             <div className="px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-center">17:00</div>
                           </div>
-                          <p className="text-[12px] text-purple-600 mt-2">
-                            💎 Passez à NAELIV PRO pour personnaliser vos heures
+                          <p className="text-[12px] text-purple-600 mt-2 flex items-center gap-1.5">
+                            <Gem size={14} className="flex-shrink-0" />
+                            <span>Passez à NAELIV PRO pour personnaliser vos heures</span>
                           </p>
                         </div>
                       </motion.div>
@@ -795,8 +798,9 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                           <p className="text-[14px] text-gray-600">
                             Fixez le prix que les inconnus doivent payer pour vous écrire (0,10€ à 100€)
                           </p>
-                          <p className="text-[12px] text-green-600 mt-1">
-                            💰 Vous touchez 1% de commission sur chaque email reçu
+                          <p className="text-[12px] text-green-600 mt-1 flex items-center gap-1.5">
+                            <Coins size={14} className="flex-shrink-0" />
+                            <span>Vous touchez 1% de commission sur chaque email reçu</span>
                           </p>
                         </div>
                       </div>
@@ -912,8 +916,9 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                           <div className="px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-center">
                             🇬🇧 Anglais uniquement
                           </div>
-                          <p className="text-[12px] text-blue-600 mt-2">
-                            💎 Passez à NAELIV PRO pour accéder à toutes les langues
+                          <p className="text-[12px] text-blue-600 mt-2 flex items-center gap-1.5">
+                            <Gem size={14} className="flex-shrink-0" />
+                            <span>Passez à NAELIV PRO pour accéder à toutes les langues</span>
                           </p>
                         </div>
                       </motion.div>
@@ -985,8 +990,9 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                           <div className="px-4 py-2 bg-gray-200 text-gray-500 rounded-xl text-center">
                             10 secondes
                           </div>
-                          <p className="text-[12px] text-orange-600 mt-2">
-                            💎 Passez à NAELIV PRO pour jusqu'à 24 heures
+                          <p className="text-[12px] text-orange-600 mt-2 flex items-center gap-1.5">
+                            <Gem size={14} className="flex-shrink-0" />
+                            <span>Passez à NAELIV PRO pour jusqu'à 24 heures</span>
                           </p>
                         </div>
                       </motion.div>

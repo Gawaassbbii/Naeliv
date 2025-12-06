@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply, Eye, Plus, Users, UserPlus, Sparkles, Wand2, GraduationCap, Key } from 'lucide-react';
+import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply, Eye, Plus, Users, UserPlus, Sparkles, Wand2, GraduationCap, Key, Hand, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -1286,7 +1286,7 @@ function MailPageContent() {
           <span className="text-[14px] font-medium">
             Zen Mode activé
             {pendingEmailsCount > 0 && (
-              <> • <span className="text-yellow-300">🌙 {pendingEmailsCount} email{pendingEmailsCount > 1 ? 's' : ''} en attente</span> ({nextDeliveryTime || zenWindows[0] || '09:00'})</>
+              <> • <span className="text-yellow-300 flex items-center gap-1"><Moon size={14} /> {pendingEmailsCount} email{pendingEmailsCount > 1 ? 's' : ''} en attente</span> ({nextDeliveryTime || zenWindows[0] || '09:00'})</>
             )}
             {pendingEmailsCount === 0 && nextDeliveryTime && (
               <> • Prochaine distribution à {nextDeliveryTime}</>
@@ -1448,10 +1448,7 @@ function MailPageContent() {
                           whileTap={{ scale: 0.95 }}
                         >
                           <Wand2 size={15} className="text-purple-600 dark:text-purple-400" />
-                          <span className="flex items-center gap-1">
-                            <span>✨</span>
-                            <span>IA Magic</span>
-                          </span>
+                          <span>IA Magic</span>
                         </motion.button>
                         {showComposeAIMenu && (
                           <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-xl z-50 min-w-[180px]">
@@ -1491,7 +1488,7 @@ function MailPageContent() {
                       >
                         <GraduationCap size={15} className="text-blue-600 dark:text-blue-400" />
                         <span className="flex items-center gap-1">
-                          <span>🎓</span>
+                          <GraduationCap size={14} />
                           <span>Corriger</span>
                         </span>
                       </motion.button>
@@ -2840,7 +2837,7 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
               whileTap={{ scale: 0.98 }}
             >
               <Sparkles size={16} />
-              {isGeneratingSummary ? 'Génération...' : '✨ Résumer'}
+              {isGeneratingSummary ? 'Génération...' : 'Résumer'}
             </motion.button>
           </div>
         )}
@@ -2938,7 +2935,7 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
                           whileTap={{ scale: 0.98 }}
                         >
                           <Wand2 size={14} />
-                          ✨ IA Magic
+                          <span className="ml-1">IA Magic</span>
                         </motion.button>
                         {showAIMenu && (
                           <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-xl z-50 min-w-[180px]">
@@ -2978,7 +2975,7 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
                       >
                         <GraduationCap size={15} className="text-blue-600 dark:text-blue-400" />
                         <span className="flex items-center gap-1">
-                          <span>🎓</span>
+                          <GraduationCap size={14} />
                           <span>Corriger</span>
                         </span>
                       </motion.button>
@@ -3062,7 +3059,7 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
                       whileTap={{ scale: 0.98 }}
                     >
                       <GraduationCap size={14} />
-                      🎓 Corriger
+                      <span className="ml-1">Corriger</span>
                     </motion.button>
                   )}
                 </div>
@@ -4328,12 +4325,12 @@ function SettingsPanel({
                                   
                                   // Demander à l'utilisateur s'il veut créer automatiquement les politiques
                                   const shouldAutoSetup = confirm(
-                                    '⚠️ Erreur de permissions RLS\n\n' +
+                                    'Erreur de permissions RLS\n\n' +
                                     'SOLUTION RAPIDE (2 minutes) :\n\n' +
-                                    '1️⃣ Ouvrez Supabase Dashboard → SQL Editor\n' +
-                                    '2️⃣ Ouvrez le fichier : executer dans sql/setup_avatars_rls_function.sql\n' +
-                                    '3️⃣ Copiez-collez tout le contenu et cliquez sur "Run"\n' +
-                                    '4️⃣ Revenez ici et cliquez "OK" pour créer automatiquement les politiques\n\n' +
+                                    '1. Ouvrez Supabase Dashboard → SQL Editor\n' +
+                                    '2. Ouvrez le fichier : executer dans sql/setup_avatars_rls_function.sql\n' +
+                                    '3. Copiez-collez tout le contenu et cliquez sur "Run"\n' +
+                                    '4. Revenez ici et cliquez "OK" pour créer automatiquement les politiques\n\n' +
                                     'Souhaitez-vous que j\'essaie de créer les politiques maintenant ?\n\n' +
                                     '(Si la fonction n\'existe pas encore, suivez les étapes ci-dessus d\'abord)'
                                   );
@@ -4349,14 +4346,14 @@ function SettingsPanel({
                                       const setupData = await setupResponse.json();
                                       
                                       if (setupData.success) {
-                                        toast.success('✅ Politiques RLS créées avec succès ! Réessayez d\'uploader votre photo.', { duration: 8000 });
+                                        toast.success('Politiques RLS créées avec succès ! Réessayez d\'uploader votre photo.', { duration: 8000 });
                                         console.log('✅ [AVATAR UPLOAD] Politiques RLS créées automatiquement');
                                       } else {
                                         // Si la fonction exec_sql n'existe pas, donner les instructions
                                         if (setupData.message?.includes('fonction') || setupData.instructions) {
                                           toast.error('La fonction SQL nécessaire n\'existe pas encore.', { duration: 8000 });
                                           alert(
-                                            '⚠️ Étape préalable requise\n\n' +
+                                            'Étape préalable requise\n\n' +
                                             'Pour activer la création automatique, exécutez d\'abord ce script SQL dans Supabase SQL Editor :\n\n' +
                                             '📄 Fichier : executer dans sql/setup_avatars_rls_function.sql\n\n' +
                                             '1. Ouvrez Supabase Dashboard → SQL Editor\n' +
@@ -4377,7 +4374,7 @@ function SettingsPanel({
                                       console.error('❌ [AVATAR UPLOAD] Erreur lors de la création automatique:', setupError);
                                       toast.error('Erreur lors de la création automatique. Veuillez suivre le guide manuel.', { duration: 8000 });
                                       alert(
-                                        '❌ Erreur lors de la création automatique\n\n' +
+                                        'Erreur lors de la création automatique\n\n' +
                                         'Veuillez créer les politiques manuellement :\n\n' +
                                         '1. Ouvrez Supabase Dashboard\n' +
                                         '2. Allez dans Storage → Policies\n' +
@@ -4732,13 +4729,39 @@ function SettingsPanel({
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
-                            {category === 'Global' ? '🌍 Global' :
-                             category === 'Privacy' ? '🛡️ Sécurité' :
-                             category === 'Europe' ? '🇪🇺 Europe' :
-                             category === 'North America' ? '🇺🇸 Amérique du Nord' :
-                             category === 'Asia/Russia' ? '🌏 Asie/Russie' :
-                             category === 'South America' ? '🌎 Amérique du Sud' :
-                             category}
+                            {category === 'Global' ? (
+                              <span className="flex items-center gap-1.5">
+                                <Globe size={14} />
+                                Global
+                              </span>
+                            ) : category === 'Privacy' ? (
+                              <span className="flex items-center gap-1.5">
+                                <Shield size={14} />
+                                Sécurité
+                              </span>
+                            ) : category === 'Europe' ? (
+                              <span className="flex items-center gap-1.5">
+                                <Globe size={14} />
+                                Europe
+                              </span>
+                            ) : category === 'North America' ? (
+                              <span className="flex items-center gap-1.5">
+                                <Globe size={14} />
+                                Amérique du Nord
+                              </span>
+                            ) : category === 'Asia/Russia' ? (
+                              <span className="flex items-center gap-1.5">
+                                <Globe size={14} />
+                                Asie/Russie
+                              </span>
+                            ) : category === 'South America' ? (
+                              <span className="flex items-center gap-1.5">
+                                <Globe size={14} />
+                                Amérique du Sud
+                              </span>
+                            ) : (
+                              category
+                            )}
                           </motion.button>
                         ))}
                       </div>
@@ -5208,8 +5231,9 @@ function SettingsPanel({
                     
                     {aliasPurchased && (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p className="text-[14px] text-green-900">
-                          ✅ Votre alias a été acheté. Vous pouvez utiliser votre adresse email <strong>{userEmail}</strong> avec ou sans abonnement PRO.
+                        <p className="text-[14px] text-green-900 flex items-center gap-2">
+                          <CheckCircle size={16} className="flex-shrink-0 text-green-600" />
+                          <span>Votre alias a été acheté. Vous pouvez utiliser votre adresse email <strong>{userEmail}</strong> avec ou sans abonnement PRO.</span>
                         </p>
                       </div>
                     )}
@@ -5360,8 +5384,9 @@ function SmartPaywallCard({ enabled, onToggle, price, onPriceChange, userPlan, c
         <p className="text-[14px] text-gray-700 dark:text-gray-300">
           Fixez le prix que les inconnus doivent payer pour vous écrire (0,10€ à 100€)
         </p>
-        <p className="text-[14px] text-gray-700 dark:text-gray-300 flex items-center gap-1">
-          👋 Vous touchez 1% de commission sur chaque email reçu
+        <p className="text-[14px] text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+          <Hand size={14} className="flex-shrink-0" />
+          <span>Vous touchez 1% de commission sur chaque email reçu</span>
         </p>
       </div>
 

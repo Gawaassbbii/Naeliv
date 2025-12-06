@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
+import { AlertTriangle } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 // Charger la page de maintenance de manière dynamique
@@ -214,7 +215,10 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
             '--maintenance-banner-height': '40px'
           } as React.CSSProperties}
         >
-          ⚠️ Mode Maintenance Actif - {isAdmin ? "Seul l'admin peut accéder au site" : "Accès Bêta activé"}
+          <span className="flex items-center justify-center gap-2">
+            <AlertTriangle size={16} className="flex-shrink-0" />
+            <span>Mode Maintenance Actif - {isAdmin ? "Seul l'admin peut accéder au site" : "Accès Bêta activé"}</span>
+          </span>
         </motion.div>
         {children}
       </>

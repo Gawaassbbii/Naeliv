@@ -668,7 +668,7 @@ export async function POST(request: NextRequest) {
           has_paid_stamp: hasPaidStamp,
           archived: false,
           deleted: false,
-          starred: true, // Marquer automatiquement tous les nouveaux emails comme favoris
+          starred: false, // Ne pas marquer automatiquement comme favori
           ...(emailCategory && { category: emailCategory }), // Ajouter la catégorie IA si disponible
         })
         .select()
@@ -696,7 +696,7 @@ export async function POST(request: NextRequest) {
         p_has_paid_stamp: hasPaidStamp,
         p_archived: false,
         p_deleted: false,
-        p_starred: true,
+        p_starred: false,
       });
 
       if (error) {

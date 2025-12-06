@@ -151,6 +151,23 @@ export default function Inscription() {
 
         setIsCheckingEmail(false);
 
+        // Vérifier si l'utilisateur a un cookie bêta
+        const hasBetaAccess = (): boolean => {
+          if (typeof document === 'undefined') return false;
+          try {
+            const cookies = document.cookie.split(';');
+            const betaCookie = cookies.find(c => {
+              const trimmed = c.trim();
+              return trimmed.startsWith('naeliv_beta_access=') && trimmed.includes('true');
+            });
+            return !!betaCookie;
+          } catch (error) {
+            return false;
+          }
+        };
+
+        const isBetaTester = hasBetaAccess();
+
         // Création du compte avec Supabase
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -161,6 +178,7 @@ export default function Inscription() {
               last_name: formData.lastName,
               username: formData.username,
               plan: selectedPlan,
+              is_beta_tester: isBetaTester, // Marquer comme testeur bêta si cookie présent
             }
           }
         });

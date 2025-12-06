@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Wand2, GraduationCap, FileText, Zap, Brain, Clock, CheckCircle } from 'lucide-react';
+import { Sparkles, Wand2, GraduationCap, FileText, Zap, Brain, Clock, CheckCircle, Clock3, PenTool, ListTodo, Briefcase, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NaelivIntelligence() {
@@ -43,11 +43,11 @@ export default function NaelivIntelligence() {
             <FileText size={40} className="text-red-600 mb-4" />
             <h2 className="text-[40px] leading-none tracking-tight mb-4 text-red-900">Sans IA</h2>
             <ul className="space-y-3 text-[18px] text-gray-700">
-              <li>⏰ Des heures à lire et résumer vos emails</li>
-              <li>✍️ Difficulté à trouver les bons mots professionnels</li>
-              <li>📝 Fautes de grammaire et d'orthographe</li>
-              <li>📊 Boîte mail désorganisée, difficile à naviguer</li>
-              <li>💼 Réponses peu professionnelles</li>
+              <li className="flex items-center gap-2"><Clock3 size={18} className="flex-shrink-0" /> Des heures à lire et résumer vos emails</li>
+              <li className="flex items-center gap-2"><PenTool size={18} className="flex-shrink-0" /> Difficulté à trouver les bons mots professionnels</li>
+              <li className="flex items-center gap-2"><FileText size={18} className="flex-shrink-0" /> Fautes de grammaire et d'orthographe</li>
+              <li className="flex items-center gap-2"><ListTodo size={18} className="flex-shrink-0" /> Boîte mail désorganisée, difficile à naviguer</li>
+              <li className="flex items-center gap-2"><Briefcase size={18} className="flex-shrink-0" /> Réponses peu professionnelles</li>
             </ul>
           </motion.div>
 
@@ -60,11 +60,11 @@ export default function NaelivIntelligence() {
             <Sparkles size={40} className="text-pink-600 mb-4" />
             <h2 className="text-[40px] leading-none tracking-tight mb-4 text-pink-900">Avec Naeliv Intelligence</h2>
             <ul className="space-y-3 text-[18px] text-gray-700">
-              <li>✨ Résumé instantané en 3 points clés</li>
-              <li>✍️ Réponses professionnelles générées en un clic</li>
-              <li>🎓 Correction automatique avec explications</li>
-              <li>📊 Catégorisation intelligente de vos emails</li>
-              <li>💼 Réponses PRO personnalisées et efficaces</li>
+              <li className="flex items-center gap-2"><Sparkles size={18} className="flex-shrink-0" /> Résumé instantané en 3 points clés</li>
+              <li className="flex items-center gap-2"><PenTool size={18} className="flex-shrink-0" /> Réponses professionnelles générées en un clic</li>
+              <li className="flex items-center gap-2"><GraduationCap size={18} className="flex-shrink-0" /> Correction automatique avec explications</li>
+              <li className="flex items-center gap-2"><TrendingUp size={18} className="flex-shrink-0" /> Catégorisation intelligente de vos emails</li>
+              <li className="flex items-center gap-2"><Briefcase size={18} className="flex-shrink-0" /> Réponses PRO personnalisées et efficaces</li>
             </ul>
           </motion.div>
         </div>
@@ -236,14 +236,14 @@ export default function NaelivIntelligence() {
               {
                 step: '1',
                 title: 'Dans la lecture d\'email',
-                description: 'Le bouton "✨ Résumer" apparaît en haut à droite. Un clic et vous avez un résumé instantané.',
+                description: 'Le bouton "Résumer" apparaît en haut à droite. Un clic et vous avez un résumé instantané.',
                 icon: FileText,
                 color: '#EC4899'
               },
               {
                 step: '2',
                 title: 'Dans la rédaction',
-                description: 'Les boutons "✨ IA Magic" et "🎓 Corriger" sont toujours à portée de main dans la barre d\'outils.',
+                description: 'Les boutons "IA Magic" et "Corriger" sont toujours à portée de main dans la barre d\'outils.',
                 icon: Wand2,
                 color: '#EC4899'
               },

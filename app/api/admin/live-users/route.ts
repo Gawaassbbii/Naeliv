@@ -62,11 +62,20 @@ export async function GET(request: NextRequest) {
     // Récupérer les utilisateurs en ligne (activité dans les 5 dernières minutes)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-    // Vérifier si la table user_activity existe et récupérer les utilisateurs actifs
+    // Récupérer d'abord les IDs des utilisateurs non-bêta
+    const { data: nonBetaProfiles } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('is_beta_tester', false);
+
+    const nonBetaUserIds = nonBetaProfiles?.map(p => p.id) || [];
+
+    // Vérifier si la table user_activity existe et récupérer les utilisateurs actifs (exclure les testeurs bêta)
     const { data: activityData, error: activityError } = await supabaseAdmin
       .from('user_activity')
       .select('user_id, last_seen_at')
       .gte('last_seen_at', fiveMinutesAgo)
+      .in('user_id', nonBetaUserIds.length > 0 ? nonBetaUserIds : []) // Filtrer par utilisateurs non-bêta
       .order('last_seen_at', { ascending: false });
 
     if (activityError) {
@@ -89,13 +98,14 @@ export async function GET(request: NextRequest) {
     const onlineUserIds = activityData?.map(item => item.user_id) || [];
     const onlineUsers = onlineUserIds.length;
 
-    // Récupérer les profils des utilisateurs en ligne
+    // Récupérer les profils des utilisateurs en ligne (exclure les testeurs bêta)
     let users: any[] = [];
     if (onlineUserIds.length > 0) {
       const { data: profiles, error: profilesError } = await supabaseAdmin
         .from('profiles')
         .select('id, email, first_name, last_name, username')
-        .in('id', onlineUserIds);
+        .in('id', onlineUserIds)
+        .eq('is_beta_tester', false); // Exclure les testeurs bêta
 
       if (!profilesError && profiles) {
         // Combiner les données d'activité avec les profils
@@ -111,10 +121,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Récupérer le nombre total d'utilisateurs
+    // Récupérer le nombre total d'utilisateurs (exclure les testeurs bêta)
     const { count: totalUsers } = await supabaseAdmin
       .from('profiles')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('is_beta_tester', false); // Exclure les testeurs bêta
 
     return NextResponse.json({
       onlineUsers,
