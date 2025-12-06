@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Key, X } from 'lucide-react';
+import { Settings, Key, X, AlertTriangle } from 'lucide-react';
 
 export default function MaintenancePage() {
   const [showBetaModal, setShowBetaModal] = useState(false);
@@ -132,11 +132,31 @@ export default function MaintenancePage() {
             Nous effectuons des mises à jour pour améliorer votre expérience.
           </motion.p>
 
-          {/* Message de contact */}
+          {/* Avertissement sur la suppression des données */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
+            className="p-4 bg-orange-50 border-2 border-orange-300 rounded-xl"
+          >
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={20} className="text-orange-600 flex-shrink-0 mt-0.5" />
+              <div className="text-left">
+                <p className="text-[14px] font-semibold text-orange-900 mb-1">
+                  Avertissement important
+                </p>
+                <p className="text-[13px] text-orange-800">
+                  Les comptes créés, emails, contacts et toutes les données générées pendant la période de maintenance risquent d'être supprimés une fois la maintenance terminée.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Message de contact */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
             className="pt-6 border-t border-gray-200 mt-6"
           >
             <p className="text-[14px] text-gray-600 mb-2">
@@ -168,7 +188,7 @@ export default function MaintenancePage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
+            transition={{ delay: 0.8 }}
             className="pt-4"
           >
             <button
