@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Boîte mail — KLAR",
-  description: "Votre boîte mail KLAR",
+  title: "Boîte mail NAELIV",
+  description: "Votre boîte mail NAELIV",
 };
 
 export default function MailLayout({
