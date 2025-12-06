@@ -178,13 +178,22 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
 
   // Si maintenance activée et admin OU utilisateur avec cookie bêta, afficher une bannière et permettre l'accès complet
   if (isMaintenance === true && (isAdmin === true || hasBeta === true)) {
-    console.log('✅ [MaintenanceGuard] Accès autorisé - Admin:', isAdmin, 'Beta:', hasBeta);
+    console.log('✅ [MaintenanceGuard] Accès autorisé - Maintenance:', isMaintenance, 'Admin:', isAdmin, 'Beta:', hasBeta);
+    console.log('✅ [MaintenanceGuard] Affichage de la bannière orange et accès complet au site');
+    
+    // Re-vérifier le cookie au moment du render pour être sûr
+    const currentBetaAccess = hasBetaAccess();
+    if (currentBetaAccess !== hasBeta) {
+      console.log('⚠️ [MaintenanceGuard] Désynchronisation détectée, re-vérification du cookie...');
+      setHasBeta(currentBetaAccess);
+    }
+    
     return (
       <>
         <motion.div
           initial={{ opacity: 0, y: -50 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-orange-500 text-white px-4 py-2 text-center text-[14px] font-medium z-50 sticky top-0"
+          className="bg-orange-500 text-white px-4 py-2 text-center text-[14px] font-medium z-50 sticky top-0 shadow-md"
         >
           ⚠️ Mode Maintenance Actif - {isAdmin ? "Seul l'admin peut accéder au site" : "Accès Bêta activé"}
         </motion.div>
