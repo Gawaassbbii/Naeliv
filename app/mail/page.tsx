@@ -1982,6 +1982,7 @@ interface EmailListProps {
     sent: number;
     replied: number;
   };
+  onToggleStar?: (index: number, e?: React.MouseEvent) => void;
 }
 
 function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoading = false, folderCounts, onToggleStar }: EmailListProps) {
