@@ -41,9 +41,10 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
 
     const checkMaintenance = async () => {
       try {
-        // Vérifier le cookie bêta d'abord
+        // Vérifier le cookie bêta d'abord (c'est la clé pour l'accès en maintenance)
         const betaAccess = hasBetaAccess();
         setHasBeta(betaAccess);
+        console.log('🔍 [MaintenanceGuard] Cookie bêta vérifié:', betaAccess);
 
         // Vérifier l'utilisateur actuel - utiliser getSession d'abord pour une détection plus rapide
         const { data: { session } } = await supabase.auth.getSession();

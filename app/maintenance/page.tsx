@@ -35,10 +35,22 @@ export default function MaintenancePage() {
       // Créer le cookie naeliv_beta_access avec durée de 30 jours
       const expires = new Date();
       expires.setTime(expires.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 jours
-      document.cookie = `naeliv_beta_access=true; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
-
-      // Recharger la page
-      window.location.reload();
+      
+      // Construire le cookie avec tous les attributs nécessaires
+      const cookieValue = `naeliv_beta_access=true; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+      
+      // Ajouter Secure seulement si on est en HTTPS (production)
+      const cookieString = window.location.protocol === 'https:' 
+        ? `${cookieValue}; Secure`
+        : cookieValue;
+      
+      document.cookie = cookieString;
+      
+      console.log('✅ [BETA ACCESS] Cookie créé, redirection vers la page d\'accueil');
+      
+      // Rediriger vers la page d'accueil pour un accès complet au site
+      // Utiliser window.location.href pour un rechargement complet qui réinitialise le MaintenanceGuard
+      window.location.href = '/';
     } catch (err: any) {
       console.error('Erreur lors de la vérification du code:', err);
       setError('Une erreur est survenue. Veuillez réessayer.');
