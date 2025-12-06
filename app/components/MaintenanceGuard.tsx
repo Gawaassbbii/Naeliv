@@ -185,15 +185,24 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     if (pathname === '/maintenance') {
       return <>{children}</>; // Afficher la page de maintenance
     }
-    // Sinon, afficher un loader pendant la redirection
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirection en cours...</p>
+    // Bloquer l'accès à toutes les autres pages et rediriger immédiatement
+    // On ne rend rien ici, la redirection est gérée dans useEffect
+    // Mais on affiche un loader pour éviter l'écran blanc
+    if (pathname !== '/maintenance') {
+      // Forcer la redirection immédiate
+      if (typeof window !== 'undefined') {
+        window.location.href = '/maintenance';
+      }
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Redirection en cours...</p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+    return null;
   }
 
   // Sinon, afficher normalement
