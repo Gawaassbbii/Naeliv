@@ -1120,8 +1120,17 @@ function MailPageContent() {
     };
   }, []);
 
+  // Ajouter l'attribut data-mail-page au body pour le CSS
+  useEffect(() => {
+    document.body.setAttribute('data-mail-page', 'true');
+    return () => {
+      document.body.removeAttribute('data-mail-page');
+    };
+  }, []);
+
   return (
     <div 
+      data-mail-page="true"
       className="overflow-hidden overflow-x-hidden flex flex-col transition-colors max-w-full"
       style={{
         backgroundColor: theme === 'dark' ? '#111827' : '#ffffff',
@@ -3638,6 +3647,8 @@ function SettingsPanel({
   const [exceptionInputs, setExceptionInputs] = useState<Record<string, string>>({});
   const [loadingFirewall, setLoadingFirewall] = useState(false);
   const [showAllProviders, setShowAllProviders] = useState(false);
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [showBlockedDomainsModal, setShowBlockedDomainsModal] = useState(false);
 
   // Liste prédéfinie de fournisseurs (importée depuis lib/email-providers.ts)
   const popularProviders = EMAIL_PROVIDERS;
@@ -3818,15 +3829,27 @@ function SettingsPanel({
     }
   };
 
-  // Filtrer les fournisseurs selon la recherche (par nom ou domaine)
+  // Obtenir toutes les catégories uniques
+  const categories = Array.from(new Set(popularProviders.map(p => p.category)));
+
+  // Filtrer les fournisseurs selon la recherche et le filtre de catégorie
   const filteredProviders = popularProviders.filter(provider => {
-    if (!firewallSearchQuery) return true;
-    const query = firewallSearchQuery.toLowerCase();
-    // Rechercher dans le nom du fournisseur
-    if (provider.name.toLowerCase().includes(query)) return true;
-    // Rechercher dans les domaines du fournisseur
-    if (provider.domains.some(domain => domain.toLowerCase().includes(query))) return true;
-    return false;
+    // Filtrer par catégorie
+    if (filterCategory && provider.category !== filterCategory) {
+      return false;
+    }
+    
+    // Filtrer par recherche textuelle
+    if (firewallSearchQuery) {
+      const query = firewallSearchQuery.toLowerCase();
+      // Rechercher dans le nom du fournisseur
+      if (provider.name.toLowerCase().includes(query)) return true;
+      // Rechercher dans les domaines du fournisseur
+      if (provider.domains.some(domain => domain.toLowerCase().includes(query))) return true;
+      return false;
+    }
+    
+    return true;
   });
 
   // Limiter l'affichage à 5 par défaut (sauf si recherche active ou showAllProviders)
@@ -4591,9 +4614,46 @@ function SettingsPanel({
                       <h2 className="text-[20px] font-semibold mb-4 text-black dark:text-white">
                         Fournisseurs d'emails
                       </h2>
-                      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">
+                      <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-4">
                         Activez le switch pour bloquer tous les domaines d'un fournisseur. Les emails de ces domaines seront automatiquement rejetés, sauf ceux dans vos exceptions.
                       </p>
+
+                      {/* Filtres intelligents */}
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        <motion.button
+                          onClick={() => setFilterCategory(null)}
+                          className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                            filterCategory === null
+                              ? 'bg-black text-white dark:bg-white dark:text-black'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Tous
+                        </motion.button>
+                        {categories.map((category) => (
+                          <motion.button
+                            key={category}
+                            onClick={() => setFilterCategory(filterCategory === category ? null : category)}
+                            className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-colors ${
+                              filterCategory === category
+                                ? 'bg-black text-white dark:bg-white dark:text-black'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            {category === 'Global' ? '🌍 Global' :
+                             category === 'Privacy' ? '🛡️ Sécurité' :
+                             category === 'Europe' ? '🇪🇺 Europe' :
+                             category === 'North America' ? '🇺🇸 Amérique du Nord' :
+                             category === 'Asia/Russia' ? '🌏 Asie/Russie' :
+                             category === 'South America' ? '🌎 Amérique du Sud' :
+                             category}
+                          </motion.button>
+                        ))}
+                      </div>
 
                       <div className="space-y-3 max-h-[500px] overflow-y-auto">
                         {displayProviders.length === 0 ? (
@@ -4744,7 +4804,7 @@ function SettingsPanel({
                       <h3 className="text-[18px] font-semibold mb-4 text-black dark:text-white">
                         Statistiques
                       </h3>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-2 gap-4 mb-4">
                         <div>
                           <p className="text-[14px] text-gray-600 dark:text-gray-400 mb-1">
                             Domaines bloqués
@@ -4762,9 +4822,105 @@ function SettingsPanel({
                           </p>
                         </div>
                       </div>
+                      
+                      {/* Bouton pour voir les domaines bloqués */}
+                      {blockedDomains.length > 0 && (
+                        <motion.button
+                          onClick={() => setShowBlockedDomainsModal(true)}
+                          className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-[14px] font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Eye size={16} />
+                          <span>Voir les domaines bloqués</span>
+                        </motion.button>
+                      )}
                     </div>
                   </div>
                 )}
+                
+                {/* Modal pour afficher les domaines bloqués */}
+                <AnimatePresence>
+                    {showBlockedDomainsModal && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowBlockedDomainsModal(false)}
+                      >
+                        <motion.div
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.9, opacity: 0 }}
+                          className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-[20px] font-semibold text-black dark:text-white">
+                              Domaines bloqués ({blockedDomains.length})
+                            </h3>
+                            <button
+                              onClick={() => setShowBlockedDomainsModal(false)}
+                              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                            >
+                              <X size={20} className="text-gray-600 dark:text-gray-400" />
+                            </button>
+                          </div>
+                          
+                          <div className="flex-1 overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {blockedDomains.map((domain) => (
+                                <div
+                                  key={domain}
+                                  className="px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between"
+                                >
+                                  <span className="text-[13px] text-red-900 dark:text-red-200 font-medium">
+                                    {domain}
+                                  </span>
+                                  <motion.button
+                                    onClick={async () => {
+                                      const newBlockedDomains = blockedDomains.filter(d => d !== domain);
+                                      setBlockedDomains(newBlockedDomains);
+                                      
+                                      const { error } = await supabase
+                                        .from('profiles')
+                                        .update({ blocked_domains: newBlockedDomains })
+                                        .eq('id', user?.id);
+                                      
+                                      if (error) {
+                                        console.error('Erreur:', error);
+                                        setBlockedDomains(blockedDomains);
+                                        toast.error('Erreur lors de la suppression');
+                                      } else {
+                                        toast.success(`${domain} débloqué`);
+                                      }
+                                    }}
+                                    className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded transition-colors"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                  >
+                                    <X size={14} className="text-red-700 dark:text-red-300" />
+                                  </motion.button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                            <motion.button
+                              onClick={() => setShowBlockedDomainsModal(false)}
+                              className="px-4 py-2 bg-black text-white dark:bg-white dark:text-black rounded-lg text-[14px] font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              Fermer
+                            </motion.button>
+                          </div>
+                      </motion.div>
+                    </motion.div>
+                    )}
+                  </AnimatePresence>
               </div>
             )}
 

@@ -175,19 +175,24 @@
     font-feature-settings: var(--default-font-feature-settings, normal);
     font-variation-settings: var(--default-font-variation-settings, normal);
     -webkit-tap-highlight-color: transparent;
-    /* Bloquer le scroll global */
-    overflow: hidden;
-    height: 100vh;
-    width: 100vw;
   }
 
   body {
     line-height: inherit;
-    /* Bloquer le scroll global */
+  }
+
+  /* Bloquer le scroll uniquement sur la page mail */
+  body[data-mail-page="true"] {
     overflow: hidden;
     height: 100vh;
     width: 100vw;
     max-width: 100vw;
+  }
+
+  html:has(body[data-mail-page="true"]) {
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
   }
 
   hr {

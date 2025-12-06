@@ -11,11 +11,18 @@ export const EMAIL_PROVIDERS: EmailProvider[] = [
   // 🌍 LES GÉANTS MONDIAUX (BIG TECH)
   // ==========================================
   {
-    name: "Google (Gmail)",
-    id: "google",
-    icon: "google", // Pour l'affichage de l'icône plus tard
+    name: "Gmail",
+    id: "gmail",
+    icon: "google",
     category: "Global",
-    domains: ["gmail.com", "googlemail.com"]
+    domains: ["gmail.com"]
+  },
+  {
+    name: "Google Mail",
+    id: "googlemail",
+    icon: "google",
+    category: "Global",
+    domains: ["googlemail.com"]
   },
   {
     name: "Microsoft (Outlook / Hotmail)",
@@ -80,21 +87,66 @@ export const EMAIL_PROVIDERS: EmailProvider[] = [
   // 🇪🇺 EUROPE (FAI & Historiques)
   // ==========================================
   {
-    name: "France (FAI & Historique)",
-    id: "fr_isp",
+    name: "Orange",
+    id: "orange",
+    category: "Europe",
+    domains: ["orange.fr", "orange.be", "wanadoo.fr"]
+  },
+  {
+    name: "Free",
+    id: "free",
+    category: "Europe",
+    domains: ["free.fr"]
+  },
+  {
+    name: "SFR",
+    id: "sfr",
+    category: "Europe",
+    domains: ["sfr.fr", "neuf.fr"]
+  },
+  {
+    name: "Bouygues Telecom",
+    id: "bouygues",
+    category: "Europe",
+    domains: ["bbox.fr"]
+  },
+  {
+    name: "La Poste",
+    id: "laposte",
+    category: "Europe",
+    domains: ["laposte.net"]
+  },
+  {
+    name: "Autres FAI France",
+    id: "fr_isp_others",
     category: "Europe",
     domains: [
-      "orange.fr", "wanadoo.fr", "free.fr", "sfr.fr", "neuf.fr", "club-internet.fr",
-      "laposte.net", "bbox.fr", "numericable.fr", "noos.fr", "aliceadsl.fr", "voila.fr", "libertysurf.fr"
+      "club-internet.fr", "numericable.fr", "noos.fr", "aliceadsl.fr", "voila.fr", "libertysurf.fr"
     ]
   },
   {
-    name: "Belgique (FAI)",
-    id: "be_isp",
+    name: "Proximus",
+    id: "proximus",
     category: "Europe",
-    domains: [
-      "proximus.be", "skynet.be", "telenet.be", "voo.be", "scarlet.be", "edpnet.be"
-    ]
+    domains: ["proximus.be"]
+  },
+  {
+    name: "Skynet",
+    id: "skynet",
+    category: "Europe",
+    domains: ["skynet.be"]
+  },
+  {
+    name: "Telenet",
+    id: "telenet",
+    category: "Europe",
+    domains: ["telenet.be"]
+  },
+  {
+    name: "Autres FAI Belgique",
+    id: "be_isp_others",
+    category: "Europe",
+    domains: ["voo.be", "scarlet.be", "edpnet.be"]
   },
   {
     name: "Allemagne (DE)",
