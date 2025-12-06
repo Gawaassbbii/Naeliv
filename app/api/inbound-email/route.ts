@@ -569,6 +569,47 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 14.6. Zen Mode - Calculer visible_at selon les préférences de l'utilisateur
+    let visibleAt = new Date(); // Par défaut : visible immédiatement
+    
+    // Récupérer les préférences Zen Mode du profil
+    const zenModeEnabled = profile.zen_mode_enabled === true;
+    const zenWindows = profile.zen_windows || ['09:00', '17:00'];
+    
+    if (zenModeEnabled && Array.isArray(zenWindows) && zenWindows.length > 0) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const currentTime = currentHour * 60 + currentMinute; // Minutes depuis minuit
+      
+      // Convertir les fenêtres en minutes depuis minuit
+      const windowTimes = zenWindows.map(window => {
+        const [hours, minutes] = window.split(':').map(Number);
+        return hours * 60 + minutes;
+      }).sort((a, b) => a - b); // Trier par ordre chronologique
+      
+      // Trouver la prochaine fenêtre
+      let nextWindow = windowTimes.find(time => time > currentTime);
+      
+      if (nextWindow === undefined) {
+        // Pas de fenêtre aujourd'hui, prendre la première de demain
+        nextWindow = windowTimes[0];
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(Math.floor(nextWindow / 60), nextWindow % 60, 0, 0);
+        visibleAt = tomorrow;
+      } else {
+        // Fenêtre aujourd'hui
+        const today = new Date(now);
+        today.setHours(Math.floor(nextWindow / 60), nextWindow % 60, 0, 0);
+        visibleAt = today;
+      }
+      
+      console.log(`🌙 [ZEN MODE] Email programmé pour: ${visibleAt.toISOString()} (fenêtre: ${zenWindows[windowTimes.indexOf(nextWindow)] || zenWindows[0]})`);
+    } else {
+      console.log(`✅ [ZEN MODE] Zen Mode désactivé, email visible immédiatement`);
+    }
+
     // 15. Stocker l'email dans Supabase
     // Utiliser le client admin (service role) pour contourner RLS, ou la fonction PostgreSQL
     let email: any;
@@ -587,6 +628,7 @@ export async function POST(request: NextRequest) {
           body_html: sanitizedData.htmlBody,
           preview: sanitizedData.preview,
           received_at: new Date().toISOString(),
+          visible_at: visibleAt.toISOString(), // Date de visibilité selon Zen Mode
           has_paid_stamp: hasPaidStamp,
           archived: false,
           deleted: false,
@@ -605,19 +647,20 @@ export async function POST(request: NextRequest) {
         console.log(`✅ [INBOUND EMAIL] Email inserted successfully with ID: ${data?.id}`);
       }
     } else {
-      // Méthode 2: Utiliser la fonction PostgreSQL (fallback)
+      // Méthode 2: Fallback - Utiliser la fonction PostgreSQL (supabaseAdmin n'est pas disponible)
+      // Note: visible_at sera défini par défaut à NOW() par la base de données
       const { data, error } = await supabase.rpc('insert_email_via_webhook', {
         p_user_id: profile.id,
         p_from_email: sanitizedData.fromEmail,
         p_from_name: sanitizedData.fromName,
-        p_subject: modifiedSubject, // Utiliser le sujet modifié (avec tag si alias système)
+        p_subject: modifiedSubject,
         p_body: sanitizedData.textBody,
         p_body_html: sanitizedData.htmlBody,
         p_preview: sanitizedData.preview,
         p_has_paid_stamp: hasPaidStamp,
         p_archived: false,
         p_deleted: false,
-        p_starred: true, // Marquer automatiquement tous les nouveaux emails comme favoris
+        p_starred: true,
       });
 
       if (error) {
@@ -637,6 +680,10 @@ export async function POST(request: NextRequest) {
         
         if (fetchError) {
           console.error('❌ [INBOUND EMAIL] Error fetching inserted email:', fetchError);
+        } else if (email) {
+          // Mettre à jour visible_at via le client normal (si possible)
+          // Note: Cela nécessite des permissions RLS appropriées
+          console.log('⚠️ [ZEN MODE] visible_at sera défini à NOW() par défaut (fonction RPC)');
         }
       }
     }

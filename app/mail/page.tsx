@@ -145,28 +145,80 @@ function MailPageContent() {
   const router = useRouter();
   const { theme, language, setTheme, setLanguage } = useTheme();
   const t = translations[language];
-  // Récupérer l'état du zen mode depuis localStorage, par défaut false
-  // Initialisé à false pour éviter les erreurs d'hydratation
+  // Récupérer l'état du zen mode depuis localStorage et Supabase
   const [zenModeActive, setZenModeActive] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [zenWindows, setZenWindows] = useState<string[]>(['09:00', '17:00']);
+  const [pendingEmailsCount, setPendingEmailsCount] = useState(0);
+  const [nextDeliveryTime, setNextDeliveryTime] = useState<string>('');
   
-  // Charger depuis localStorage après le montage (côté client uniquement)
+  // Charger depuis localStorage et Supabase après le montage
   React.useEffect(() => {
     setIsMounted(true);
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('zenModeActive');
-      if (saved === 'true') {
-        setZenModeActive(true);
+    const loadZenMode = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        
+        const response = await fetch('/api/zen-mode', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setZenModeActive(data.enabled || false);
+          setZenWindows(data.windows || ['09:00', '17:00']);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('zenModeActive', (data.enabled || false).toString());
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du Zen Mode:', error);
+        // Fallback sur localStorage
+        if (typeof window !== 'undefined') {
+          const saved = localStorage.getItem('zenModeActive');
+          if (saved === 'true') {
+            setZenModeActive(true);
+          }
+        }
       }
-    }
+    };
+    loadZenMode();
   }, []);
   
-  // Sauvegarder l'état du zen mode dans localStorage quand il change
-  React.useEffect(() => {
-    if (isMounted && typeof window !== 'undefined') {
-      localStorage.setItem('zenModeActive', zenModeActive.toString());
+  // Fonction wrapper pour mettre à jour le Zen Mode et libérer les emails si désactivation
+  const handleZenModeChange = async (active: boolean) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('Pas de session');
+        return;
+      }
+
+      const response = await fetch('/api/zen-mode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ enabled: active, windows: zenWindows })
+      });
+
+      if (response.ok) {
+        setZenModeActive(active);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('zenModeActive', active.toString());
+        }
+      } else {
+        console.error('Erreur lors de la mise à jour du Zen Mode');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du Zen Mode:', error);
     }
-  }, [zenModeActive, isMounted]);
+  };
+
   
   // Force dark mode styles with inline styles
   React.useEffect(() => {
@@ -198,6 +250,48 @@ function MailPageContent() {
   const [activeFolder, setActiveFolder] = useState<'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied'>('inbox');
   const [isLoading, setIsLoading] = useState(true);
   const [emails, setEmails] = useState<any[]>([]);
+
+  // Charger le nombre d'emails en attente si Zen Mode actif
+  React.useEffect(() => {
+    if (!zenModeActive || !user?.id) {
+      setPendingEmailsCount(0);
+      setNextDeliveryTime('');
+      return;
+    }
+
+    const loadPendingEmails = async () => {
+      try {
+        const now = new Date().toISOString();
+        const { data, error } = await supabase
+          .from('emails')
+          .select('visible_at', { count: 'exact', head: false })
+          .eq('user_id', user.id)
+          .gt('visible_at', now)
+          .eq('deleted', false)
+          .eq('archived', false);
+
+        if (!error && data) {
+          setPendingEmailsCount(data.length || 0);
+          
+          // Trouver la prochaine heure de livraison
+          if (data.length > 0) {
+            const nextVisible = data
+              .map((e: any) => new Date(e.visible_at).getTime())
+              .sort((a, b) => a - b)[0];
+            const nextDate = new Date(nextVisible);
+            setNextDeliveryTime(nextDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des emails en attente:', error);
+      }
+    };
+
+    loadPendingEmails();
+    // Rafraîchir toutes les minutes
+    const interval = setInterval(loadPendingEmails, 60000);
+    return () => clearInterval(interval);
+  }, [zenModeActive, user?.id]);
   const [folderCounts, setFolderCounts] = useState({
     inbox: 0,
     starred: 0,
@@ -251,6 +345,17 @@ function MailPageContent() {
   useEffect(() => {
     checkUser();
   }, []);
+
+  // Recharger les emails quand le Zen Mode est désactivé
+  useEffect(() => {
+    if (!zenModeActive && user?.id && activeFolder) {
+      // Attendre un peu pour laisser le temps à l'API de libérer les emails
+      const timer = setTimeout(() => {
+        loadEmails(activeFolder);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [zenModeActive]); // Seulement quand zenModeActive change
 
   // Recharger les emails quand l'utilisateur change (après reconnexion)
   useEffect(() => {
@@ -350,29 +455,40 @@ function MailPageContent() {
       case 'inbox':
         // Inbox: not archived, not deleted, and folder is NOT 'sent' (to exclude sent emails)
         query = query.eq('archived', false).eq('deleted', false).neq('folder', 'sent');
+        // Zen Mode: Only show emails whose visible_at is <= now (emails that should be visible)
+        query = query.lte('visible_at', new Date().toISOString());
         break;
       case 'starred':
         query = query.eq('starred', true).eq('archived', false).eq('deleted', false);
+        // Zen Mode: Only show emails whose visible_at is <= now
+        query = query.lte('visible_at', new Date().toISOString());
         break;
       case 'archived':
         query = query.eq('archived', true).eq('deleted', false);
+        // Zen Mode: Only show emails whose visible_at is <= now
+        query = query.lte('visible_at', new Date().toISOString());
         break;
       case 'trash':
         query = query.eq('deleted', true);
+        // Zen Mode: Show all deleted emails regardless of visible_at
         break;
       case 'sent':
         // For sent emails, filter by folder='sent' and no in_reply_to (not replies)
         // Note: folder column must exist in Supabase (run add_email_sending_columns.sql)
+        // Sent emails are always visible (user sent them, not subject to Zen Mode)
         query = query.eq('folder', 'sent').eq('deleted', false).is('in_reply_to', null);
         break;
       case 'replied':
         // For replied emails, filter by folder='sent' and has in_reply_to (is a reply)
         // We'll filter client-side since Supabase .not('is', null) syntax is tricky
         // Note: folder column must exist in Supabase (run add_email_sending_columns.sql)
+        // Sent emails are always visible (user sent them, not subject to Zen Mode)
         query = query.eq('folder', 'sent').eq('deleted', false);
         break;
       default:
         query = query.eq('archived', false).eq('deleted', false);
+        // Zen Mode: Only show emails whose visible_at is <= now
+        query = query.lte('visible_at', new Date().toISOString());
     }
     
     // Order by received_at or created_at (for sent emails)
@@ -1144,7 +1260,7 @@ function MailPageContent() {
       <Header 
         onSignOut={handleSignOut} 
         zenModeActive={zenModeActive} 
-        setZenModeActive={setZenModeActive}
+        setZenModeActive={handleZenModeChange}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         countVisibility={countVisibility}
@@ -1165,7 +1281,16 @@ function MailPageContent() {
         >
           <Zap size={16} className="text-white" />
           <span className="text-[14px] font-medium">
-            Zen Mode activé • Prochaine distribution à 17h00
+            Zen Mode activé
+            {pendingEmailsCount > 0 && (
+              <> • <span className="text-yellow-300">🌙 {pendingEmailsCount} email{pendingEmailsCount > 1 ? 's' : ''} en attente</span> ({nextDeliveryTime || zenWindows[0] || '09:00'})</>
+            )}
+            {pendingEmailsCount === 0 && nextDeliveryTime && (
+              <> • Prochaine distribution à {nextDeliveryTime}</>
+            )}
+            {pendingEmailsCount === 0 && !nextDeliveryTime && zenWindows.length > 0 && (
+              <> • Prochaine distribution à {zenWindows[0]}</>
+            )}
           </span>
         </motion.div>
       )}
@@ -1489,7 +1614,7 @@ function MailPageContent() {
 interface HeaderProps {
   onSignOut: () => void;
   zenModeActive: boolean;
-  setZenModeActive: (active: boolean) => void;
+  setZenModeActive: (active: boolean) => Promise<void>;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   countVisibility: Record<string, boolean>;
@@ -1537,7 +1662,14 @@ const Header = React.memo(function Header({ onSignOut, zenModeActive, setZenMode
       {/* Right Icons */}
       <div className="flex items-center gap-4">
         <motion.button
-          onClick={() => setZenModeActive(!zenModeActive)}
+          onClick={async () => {
+            const result = setZenModeActive(!zenModeActive);
+            if (result instanceof Promise) {
+              result.catch((err) => {
+                console.error('Erreur lors du changement du Zen Mode:', err);
+              });
+            }
+          }}
           className={`flex items-center gap-2 px-3 py-2 rounded-full text-[14px] transition-colors relative overflow-hidden ${
             zenModeActive
               ? 'border-2 border-black bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
