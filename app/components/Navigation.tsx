@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { Shield, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const ADMIN_EMAIL = 'gabi@naeliv.com';
 
@@ -13,11 +13,6 @@ export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMaintenance, setIsMaintenance] = useState(false);
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminLoading, setAdminLoading] = useState(false);
-  const [adminError, setAdminError] = useState('');
 
   useEffect(() => {
     const checkMaintenance = async () => {
@@ -59,53 +54,6 @@ export function Navigation() {
     };
   }, []);
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminError('');
-    setAdminLoading(true);
-
-    // Vérifier que l'email est gabi@naeliv.com
-    if (adminEmail.toLowerCase().trim() !== ADMIN_EMAIL.toLowerCase()) {
-      setAdminError('Accès réservé aux administrateurs autorisés.');
-      setAdminLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: adminEmail.trim(),
-        password: adminPassword,
-      });
-
-      if (error) {
-        setAdminError('Email ou mot de passe incorrect.');
-        setAdminLoading(false);
-        return;
-      }
-
-      if (data.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-        // Connexion réussie, fermer la modal
-        setShowAdminModal(false);
-        setAdminEmail('');
-        setAdminPassword('');
-        
-        // Attendre un peu pour que la session soit bien établie
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Rediriger vers la page d'accueil avec un rechargement complet
-        // Cela permet au MaintenanceGuard de détecter l'admin et de permettre l'accès
-        window.location.href = '/';
-      } else {
-        setAdminError('Accès réservé aux administrateurs autorisés.');
-        await supabase.auth.signOut();
-      }
-    } catch (error: any) {
-      setAdminError('Une erreur est survenue. Veuillez réessayer.');
-      console.error('Admin login error:', error);
-    } finally {
-      setAdminLoading(false);
-    }
-  };
 
   // Si en maintenance, afficher uniquement le bouton Admin
   if (isMaintenance) {
