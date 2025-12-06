@@ -66,7 +66,17 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
           .single();
 
         if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-          console.error('❌ [MaintenanceGuard] Erreur:', error);
+          console.error('❌ [MaintenanceGuard] Erreur lors de la récupération de maintenance:', error);
+          // Si erreur autre que "not found", considérer que maintenance est désactivée
+          setIsMaintenance(false);
+          setLoading(false);
+          return;
+        }
+
+        // Si pas de données (PGRST116 = not found), maintenance est désactivée
+        if (!data) {
+          console.log('🔍 [MaintenanceGuard] Aucune donnée de maintenance trouvée, maintenance désactivée');
+          setIsMaintenance(false);
           setLoading(false);
           return;
         }
@@ -74,6 +84,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
         const maintenanceActive = (data as { value: string } | null)?.value === 'true';
         setIsMaintenance(maintenanceActive);
         console.log('🔍 [MaintenanceGuard] Maintenance active:', maintenanceActive);
+        console.log('🔍 [MaintenanceGuard] État complet - Maintenance:', maintenanceActive, 'Admin:', userIsAdmin, 'Beta:', betaAccess, 'Email:', userEmail);
 
         // Si maintenance activée et admin est sur /maintenance, rediriger vers la page d'accueil
         if (maintenanceActive && userIsAdmin && pathname === '/maintenance') {
@@ -160,7 +171,9 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   }, [router, pathname]);
 
   // Afficher un loader pendant la vérification
-  if (loading) {
+  // Si maintenance est null (en cours de chargement), afficher un loader
+  // Sauf si on est sûr que l'utilisateur est admin (pour éviter de bloquer l'admin)
+  if (loading || (isMaintenance === null && !isAdmin)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -172,7 +185,8 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Si maintenance activée et admin OU utilisateur avec cookie bêta, afficher une bannière et permettre l'accès complet
-  if (isMaintenance && (isAdmin || hasBeta)) {
+  if (isMaintenance === true && (isAdmin === true || hasBeta === true)) {
+    console.log('✅ [MaintenanceGuard] Accès autorisé - Admin:', isAdmin, 'Beta:', hasBeta);
     return (
       <>
         <motion.div
@@ -188,12 +202,18 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Si maintenance activée et pas admin et pas de cookie bêta
-  if (isMaintenance && !isAdmin && !hasBeta) {
+  if (isMaintenance === true && isAdmin === false && hasBeta === false) {
+    console.log('🚫 [MaintenanceGuard] Affichage de la page de maintenance - Maintenance:', isMaintenance, 'Admin:', isAdmin, 'Beta:', hasBeta);
     // Afficher directement la page de maintenance au lieu de rediriger
     // Cela évite les problèmes de timing et de boucles de redirection
     // TOUTES les pages (/, /inscription, /zen-mode, etc.) afficheront la page de maintenance
     // Ne pas afficher la navigation ni les children
     return <MaintenanceOverlay />;
+  }
+
+  // Debug: Si maintenance est null, on attend encore
+  if (isMaintenance === null) {
+    console.log('⏳ [MaintenanceGuard] En attente de la vérification de maintenance...');
   }
 
   // Sinon, afficher normalement
