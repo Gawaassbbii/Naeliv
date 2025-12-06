@@ -176,17 +176,20 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Re-vérifier le cookie bêta au moment du render (synchrone) pour éviter les problèmes de timing
+  const currentBetaAccess = hasBetaAccess();
+  const effectiveBetaAccess = currentBetaAccess || hasBeta;
+  
+  // Si le cookie est maintenant présent mais n'était pas détecté avant, mettre à jour l'état
+  if (currentBetaAccess && !hasBeta) {
+    console.log('🔄 [MaintenanceGuard] Cookie bêta détecté au moment du render, mise à jour de l\'état');
+    setHasBeta(true);
+  }
+
   // Si maintenance activée et admin OU utilisateur avec cookie bêta, afficher une bannière et permettre l'accès complet
-  if (isMaintenance === true && (isAdmin === true || hasBeta === true)) {
-    console.log('✅ [MaintenanceGuard] Accès autorisé - Maintenance:', isMaintenance, 'Admin:', isAdmin, 'Beta:', hasBeta);
+  if (isMaintenance === true && (isAdmin === true || effectiveBetaAccess)) {
+    console.log('✅ [MaintenanceGuard] Accès autorisé - Maintenance:', isMaintenance, 'Admin:', isAdmin, 'Beta (état):', hasBeta, 'Beta (actuel):', currentBetaAccess);
     console.log('✅ [MaintenanceGuard] Affichage de la bannière orange et accès complet au site');
-    
-    // Re-vérifier le cookie au moment du render pour être sûr
-    const currentBetaAccess = hasBetaAccess();
-    if (currentBetaAccess !== hasBeta) {
-      console.log('⚠️ [MaintenanceGuard] Désynchronisation détectée, re-vérification du cookie...');
-      setHasBeta(currentBetaAccess);
-    }
     
     return (
       <>
@@ -202,9 +205,19 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Re-vérifier le cookie bêta au moment du render (synchrone) pour éviter les problèmes de timing
+  const currentBetaAccess = hasBetaAccess();
+  const effectiveBetaAccess = currentBetaAccess || hasBeta;
+  
+  // Si le cookie est maintenant présent mais n'était pas détecté avant, mettre à jour l'état
+  if (currentBetaAccess && !hasBeta) {
+    console.log('🔄 [MaintenanceGuard] Cookie bêta détecté au moment du render, mise à jour de l\'état');
+    setHasBeta(true);
+  }
+
   // Si maintenance activée et pas admin et pas de cookie bêta
-  if (isMaintenance === true && isAdmin === false && hasBeta === false) {
-    console.log('🚫 [MaintenanceGuard] Affichage de la page de maintenance - Maintenance:', isMaintenance, 'Admin:', isAdmin, 'Beta:', hasBeta);
+  if (isMaintenance === true && isAdmin === false && !effectiveBetaAccess) {
+    console.log('🚫 [MaintenanceGuard] Affichage de la page de maintenance - Maintenance:', isMaintenance, 'Admin:', isAdmin, 'Beta (état):', hasBeta, 'Beta (actuel):', currentBetaAccess);
     // Afficher directement la page de maintenance au lieu de rediriger
     // Cela évite les problèmes de timing et de boucles de redirection
     // TOUTES les pages (/, /inscription, /zen-mode, etc.) afficheront la page de maintenance
