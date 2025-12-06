@@ -937,7 +937,7 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                           </p>
                           {settings.accountType === 'essential' && (
                             <p className="text-[12px] text-orange-600 mt-1">
-                              ⏱️ 10 secondes uniquement • Passez à PRO pour jusqu'à 60 secondes
+                              ⏱️ 10 secondes uniquement • Passez à PRO pour jusqu'à 24 heures
                             </p>
                           )}
                         </div>
@@ -986,7 +986,7 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                             10 secondes
                           </div>
                           <p className="text-[12px] text-orange-600 mt-2">
-                            💎 Passez à NAELIV PRO pour jusqu'à 60 secondes
+                            💎 Passez à NAELIV PRO pour jusqu'à 24 heures
                           </p>
                         </div>
                       </motion.div>

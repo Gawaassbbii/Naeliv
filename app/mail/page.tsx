@@ -3980,7 +3980,7 @@ function SettingsPanel({
                     icon={RotateCcw}
                     iconColor="text-orange-600"
                     name="Rewind"
-                    description={userPlan === 'pro' ? "Annulez l'envoi d'un email dans les secondes suivantes" : "Annulez l'envoi d'un email (10-30 secondes avec Essential)"}
+                    description={userPlan === 'pro' ? "Annulez l'envoi d'un email dans les secondes suivantes" : "Annulez l'envoi d'un email (10 secondes avec Essential)"}
                     enabled={rewind}
                     onToggle={() => setRewind(!rewind)}
                     additionalSettings={
@@ -3993,22 +3993,28 @@ function SettingsPanel({
                             value={rewindDelay}
                             onChange={(e) => {
                               const newValue = e.target.value;
-                              // Limiter les Essential à 10-20-30 secondes
-                              if (userPlan === 'essential' && newValue === '60') {
+                              // Limiter les Essential à 10 secondes uniquement
+                              if (userPlan === 'essential' && newValue !== '10') {
                                 return;
                               }
                               setRewindDelay(newValue);
                             }}
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white"
                           >
-                            <option value="10">10 secondes</option>
-                            <option value="20">20 secondes</option>
-                            <option value="30">30 secondes</option>
-                            {userPlan === 'pro' && <option value="60">60 secondes</option>}
+                            {userPlan === 'essential' ? (
+                              <option value="10">10 secondes</option>
+                            ) : (
+                              <>
+                                <option value="10">10 secondes</option>
+                                <option value="20">20 secondes</option>
+                                <option value="30">30 secondes</option>
+                                <option value="60">60 secondes</option>
+                              </>
+                            )}
                           </select>
                           {userPlan === 'essential' && (
                             <p className="text-[12px] text-purple-600 dark:text-purple-400 mt-2">
-                              Passer à PRO pour accéder à 60 secondes
+                              Passer à PRO pour accéder à 24 heures
                             </p>
                           )}
                         </div>
