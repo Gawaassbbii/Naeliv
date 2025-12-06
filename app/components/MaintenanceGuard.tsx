@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
+
+// Charger la page de maintenance de manière dynamique
+const MaintenancePage = dynamic(() => import('@/app/maintenance/page'), {
+  ssr: false
+});
 
 const ADMIN_EMAIL = 'gabi@naeliv.com';
 
@@ -198,19 +204,11 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
 
   // Si maintenance activée et pas admin et pas de cookie bêta
   if (isMaintenance && !isAdmin && !hasBeta) {
-    // Si on est sur /maintenance, afficher la page
-    if (pathname === '/maintenance') {
-      return <>{children}</>; // Afficher la page de maintenance
-    }
-    // Afficher un loader pendant la redirection (la redirection est gérée dans useEffect)
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirection en cours...</p>
-        </div>
-      </div>
-    );
+    // Afficher directement la page de maintenance au lieu de rediriger
+    // Cela évite les problèmes de timing et de boucles de redirection
+    // TOUTES les pages (/, /inscription, /zen-mode, etc.) afficheront la page de maintenance
+    // Ne pas afficher la navigation ni les children
+    return <MaintenancePage />;
   }
 
   // Sinon, afficher normalement

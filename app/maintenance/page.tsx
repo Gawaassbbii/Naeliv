@@ -99,23 +99,6 @@ export default function MaintenancePage() {
             Nous effectuons des mises à jour pour améliorer votre expérience.
           </motion.p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="pt-6 border-t border-gray-200 mt-6"
-          >
-            <p className="text-[14px] text-gray-600 mb-2">
-              Si vous avez des questions ou vous voulez tester la version bêta, écrivez-nous à l'adresse suivante :
-            </p>
-            <a 
-              href="mailto:support@naeliv.com" 
-              className="text-[14px] text-purple-600 hover:text-purple-700 hover:underline font-medium"
-            >
-              support@naeliv.com
-            </a>
-          </motion.div>
-
           {/* Message de contact */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
