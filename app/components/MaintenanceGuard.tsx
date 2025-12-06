@@ -85,22 +85,6 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
         setIsMaintenance(maintenanceActive);
         console.log('🔍 [MaintenanceGuard] Maintenance active:', maintenanceActive);
         console.log('🔍 [MaintenanceGuard] État complet - Maintenance:', maintenanceActive, 'Admin:', userIsAdmin, 'Beta:', betaAccess, 'Email:', userEmail);
-
-        // Si maintenance activée et admin est sur /maintenance, rediriger vers la page d'accueil
-        if (maintenanceActive && userIsAdmin && pathname === '/maintenance') {
-          console.log('✅ [MaintenanceGuard] Redirection vers / (admin sur maintenance)');
-          setRedirecting(true);
-          router.replace('/');
-          return;
-        }
-
-        // Si maintenance activée et utilisateur a le cookie bêta, rediriger depuis /maintenance
-        if (maintenanceActive && betaAccess && pathname === '/maintenance') {
-          console.log('✅ [MaintenanceGuard] Redirection vers / (utilisateur avec accès bêta)');
-          setRedirecting(true);
-          router.replace('/');
-          return;
-        }
         
         // Si maintenance activée et admin, permettre l'accès complet (pas de redirection)
         if (maintenanceActive && userIsAdmin) {
@@ -147,11 +131,6 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
               
               setIsAdmin(currentUserIsAdmin);
               console.log('🔄 [MaintenanceGuard] Changement maintenance:', newValue, 'Admin:', currentUserIsAdmin, 'Beta:', betaAccess);
-              
-              // Si maintenance activée et admin/bêta sur /maintenance, rediriger vers /
-              if (newValue && (currentUserIsAdmin || betaAccess) && pathname === '/maintenance') {
-                router.replace('/');
-              }
             }
           )
           .subscribe();
