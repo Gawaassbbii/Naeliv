@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft,
@@ -16,15 +16,37 @@ import {
   Sun,
   Check,
   Mail,
-  LogOut
+  LogOut,
+  AlertTriangle,
+  Settings as SettingsIcon,
+  Users
 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 
 interface SettingsProps {
-  onNavigate: (page: string) => void;
+  onNavigate?: (page: string) => void;
   userEmail?: string;
 }
 
 export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: SettingsProps) {
+  const router = useRouter();
+  
+  // Fonction de navigation qui utilise useRouter si onNavigate n'est pas fourni
+  const handleNavigate = (page: string) => {
+    if (onNavigate) {
+      onNavigate(page);
+    } else {
+      // Navigation via Next.js router
+      if (page === 'mailbox' || page === 'mail') {
+        router.push('/mail');
+      } else if (page === 'home') {
+        router.push('/');
+      } else {
+        router.push(`/${page}`);
+      }
+    }
+  };
   // Default settings - replace with actual state management
   const defaultSettings = {
     fullName: '',
@@ -46,27 +68,107 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
   };
   
   const [settings, setSettings] = useState(defaultSettings);
-  const [activeSection, setActiveSection] = useState('account');
+  
+  // Vérifier si une section est spécifiée dans l'URL
+  const [activeSection, setActiveSection] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const section = params.get('section');
+      if (section) {
+        return section;
+      }
+    }
+    return 'account';
+  });
+  
+  // Écouter les changements d'URL pour mettre à jour la section active
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handlePopState = () => {
+        const params = new URLSearchParams(window.location.search);
+        const section = params.get('section');
+        if (section) {
+          setActiveSection(section);
+        }
+      };
+      
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    }
+  }, []);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [fullName, setFullName] = useState(settings.fullName);
   const [emailSignature, setEmailSignature] = useState(settings.emailSignature);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [loadingEmail, setLoadingEmail] = useState(true);
+  
+  // Récupérer l'email de l'utilisateur depuis Supabase
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      try {
+        setLoadingEmail(true);
+        // Essayer d'abord avec getSession pour être plus rapide
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email) {
+          setCurrentUserEmail(session.user.email);
+          console.log('✅ [Settings] Email défini depuis session:', session.user.email);
+          setLoadingEmail(false);
+          return;
+        }
+        
+        // Si pas de session, utiliser getUser
+        const { data: { user }, error } = await supabase.auth.getUser();
+        console.log('🔍 [Settings] Récupération de l\'email utilisateur:', { user: user?.email, error });
+        if (user?.email) {
+          setCurrentUserEmail(user.email);
+          console.log('✅ [Settings] Email défini depuis getUser:', user.email);
+        } else {
+          console.warn('⚠️ [Settings] Aucun email trouvé pour l\'utilisateur');
+        }
+      } catch (error) {
+        console.error('❌ [Settings] Erreur lors de la récupération de l\'email utilisateur:', error);
+      } finally {
+        setLoadingEmail(false);
+      }
+    };
+    
+    fetchUserEmail();
+  }, []);
   
   const updateSettings = (updates: Partial<typeof defaultSettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
   };
   
-  const contextUserEmail = userEmail;
+  // Utiliser l'email récupéré, sinon celui passé en prop
+  const contextUserEmail = currentUserEmail || userEmail;
+  
+  // Vérifier si l'utilisateur est admin
+  const isAdmin = contextUserEmail?.toLowerCase().trim() === 'gabi@naeliv.com';
 
-  const sections = [
-    { id: 'account', label: 'Compte', icon: User },
-    { id: 'features', label: 'Fonctionnalités', icon: Zap },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'security', label: 'Sécurité', icon: Lock },
-    { id: 'billing', label: 'Abonnement', icon: CreditCard }
-  ];
+  const sections = useMemo(() => {
+    const baseSections = [
+      { id: 'account', label: 'Compte', icon: User },
+      { id: 'features', label: 'Fonctionnalités', icon: Zap },
+      { id: 'notifications', label: 'Notifications', icon: Bell },
+      { id: 'security', label: 'Sécurité', icon: Lock },
+      { id: 'billing', label: 'Abonnement', icon: CreditCard },
+    ];
+    
+    // Ajouter les sections admin pour gabi@naeliv.com
+    const checkIsAdmin = contextUserEmail?.toLowerCase().trim() === 'gabi@naeliv.com';
+    if (checkIsAdmin) {
+      return [
+        ...baseSections,
+        { id: 'maintenance', label: 'Maintenance', icon: SettingsIcon },
+        { id: 'live-users', label: 'Live Users', icon: Users }
+      ];
+    }
+    
+    return baseSections;
+  }, [contextUserEmail]);
 
   const handleLogout = () => {
-    onNavigate('home');
+    handleNavigate('home');
   };
 
   const handleSaveAccount = () => {
@@ -90,6 +192,352 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
     return langs[code] || code;
   };
 
+  // Composant pour la section Admin Maintenance
+  function AdminMaintenanceSection({ userEmail }: { userEmail: string }) {
+    const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [checking, setChecking] = useState(true);
+
+    // Vérifier le statut actuel
+    useEffect(() => {
+      const checkStatus = async () => {
+        try {
+          const response = await fetch('/api/maintenance');
+          const data = await response.json();
+          setMaintenanceEnabled(data.enabled === true);
+        } catch (error) {
+          console.error('Erreur vérification maintenance:', error);
+        } finally {
+          setChecking(false);
+        }
+      };
+      checkStatus();
+    }, []);
+
+    const toggleMaintenance = async () => {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          alert('Vous devez être connecté');
+          return;
+        }
+
+        const response = await fetch('/api/maintenance', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ enabled: !maintenanceEnabled })
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+          setMaintenanceEnabled(result.enabled);
+        } else {
+          alert(result.error || 'Erreur lors de la mise à jour');
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (checking) {
+      return (
+        <div className="p-6 border-2 border-orange-300 rounded-2xl bg-orange-50">
+          <div className="animate-pulse text-gray-600">Chargement...</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-6 border-2 border-orange-300 rounded-2xl bg-orange-50">
+        <div className="flex items-start gap-3 mb-4">
+          <AlertTriangle size={24} className="text-orange-600 mt-1 flex-shrink-0" />
+          <div className="flex-1">
+            <h3 className="text-[20px] mb-1 font-semibold">Mode Maintenance (Admin)</h3>
+            <p className="text-[14px] text-gray-700">
+              Activez le mode maintenance pour bloquer toutes les connexions et inscriptions, sauf pour votre compte admin.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-4">
+          <div>
+            <p className="text-[16px] font-medium mb-1">
+              Statut: {maintenanceEnabled ? (
+                <span className="text-orange-600">🟠 Activé</span>
+              ) : (
+                <span className="text-green-600">🟢 Désactivé</span>
+              )}
+            </p>
+            <p className="text-[12px] text-gray-600">
+              {maintenanceEnabled 
+                ? 'Les utilisateurs voient un message de maintenance'
+                : 'Le site est accessible à tous'
+              }
+            </p>
+          </div>
+          <motion.button
+            onClick={toggleMaintenance}
+            disabled={loading}
+            className={`px-6 py-3 rounded-full text-[14px] font-medium transition-colors ${
+              maintenanceEnabled
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-orange-600 text-white hover:bg-orange-700'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+            whileHover={loading ? {} : { scale: 1.05 }}
+            whileTap={loading ? {} : { scale: 0.95 }}
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Chargement...</span>
+              </span>
+            ) : (
+              maintenanceEnabled ? 'Désactiver' : 'Activer'
+            )}
+          </motion.button>
+        </div>
+      </div>
+    );
+  }
+
+  // Composant pour la section Live Users (Admin uniquement)
+  function LiveUsersSection({ userEmail }: { userEmail: string }) {
+    const [onlineUsers, setOnlineUsers] = useState(0);
+    const [totalUsers, setTotalUsers] = useState(0);
+    const [users, setUsers] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [presenceUsers, setPresenceUsers] = useState<Map<string, any>>(new Map());
+
+    // Utiliser Supabase Presence pour tracker les utilisateurs en ligne
+    useEffect(() => {
+      let channel: any = null;
+
+      const setupPresence = async () => {
+        try {
+          // Créer le channel pour écouter la présence
+          channel = supabase.channel('admin-online-users', {
+            config: {
+              presence: {
+                key: 'user_id',
+              },
+            },
+          });
+
+          // Écouter les changements de présence
+          channel.on('presence', { event: 'sync' }, () => {
+            const state = channel.presenceState();
+            const presenceMap = new Map<string, any>();
+            let count = 0;
+
+            // Compter les utilisateurs en ligne
+            for (const [key, presences] of Object.entries(state)) {
+              if (Array.isArray(presences) && presences.length > 0) {
+                presenceMap.set(key, presences[0]);
+                count++;
+              }
+            }
+
+            setPresenceUsers(presenceMap);
+            setOnlineUsers(count);
+          });
+
+          // S'abonner au channel
+          channel.subscribe(async (status: string) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ [Live Users] Abonné au channel admin-online-users');
+            }
+          });
+        } catch (err: any) {
+          console.error('❌ [Live Users] Erreur Presence:', err);
+        }
+      };
+
+      setupPresence();
+
+      // Récupérer le total d'utilisateurs depuis l'API
+      const fetchTotalUsers = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session?.access_token) {
+            setError('Vous devez être connecté');
+            return;
+          }
+
+          const response = await fetch('/api/admin/live-users', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            setTotalUsers(result.totalUsers || 0);
+            setUsers(result.users || []);
+            setError(null);
+          } else {
+            setError(result.error || 'Erreur lors de la récupération');
+          }
+        } catch (err: any) {
+          console.error('Erreur:', err);
+          setError('Une erreur est survenue');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchTotalUsers();
+
+      // Cleanup
+      return () => {
+        if (channel) {
+          channel.unsubscribe();
+        }
+      };
+    }, []);
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-[32px]">Live Users</h1>
+        </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-red-600 text-[14px]">{error}</p>
+          </div>
+        )}
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <motion.div
+            className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1 }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <motion.div
+                animate={{
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                }}
+                className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center relative"
+              >
+                <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75"></div>
+                <User size={24} className="text-white relative z-10" />
+              </motion.div>
+              <div>
+                <p className="text-[14px] text-gray-600">Utilisateurs en ligne</p>
+                <p className="text-[32px] font-bold text-black flex items-center gap-2">
+                  <span className="text-green-500">🟢</span>
+                  {loading ? '...' : onlineUsers}
+                </p>
+              </div>
+            </div>
+            <p className="text-[12px] text-gray-600 mt-2">En temps réel via Supabase Presence</p>
+          </motion.div>
+
+          <motion.div
+            className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-2xl"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                <User size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[14px] text-gray-600">Total utilisateurs</p>
+                <p className="text-[32px] font-bold text-black">{loading ? '...' : totalUsers}</p>
+              </div>
+            </div>
+            <p className="text-[12px] text-gray-600 mt-2">Nombre total de comptes créés</p>
+          </motion.div>
+        </div>
+
+        {/* Liste des utilisateurs en ligne */}
+        {!loading && !error && (
+          <div className="bg-white border-2 border-gray-300 rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-gray-300 bg-gray-50">
+              <h2 className="text-[18px] font-semibold text-black">
+                Utilisateurs connectés ({onlineUsers})
+              </h2>
+            </div>
+            <div className="max-h-96 overflow-y-auto">
+              {presenceUsers.size > 0 ? (
+                <div className="divide-y divide-gray-200">
+                  {Array.from(presenceUsers.entries()).map(([userId, presence]: [string, any], index: number) => (
+                    <motion.div
+                      key={userId}
+                      className="p-4 hover:bg-gray-50 transition-colors"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <motion.div
+                            animate={{
+                              scale: [1, 1.1, 1],
+                            }}
+                            transition={{
+                              duration: 2,
+                              repeat: Infinity,
+                            }}
+                            className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center relative"
+                          >
+                            <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75"></div>
+                            <User size={20} className="text-white relative z-10" />
+                          </motion.div>
+                          <div>
+                            <p className="text-[16px] font-medium text-black">
+                              {presence.email || userId}
+                            </p>
+                            <p className="text-[14px] text-gray-600">Connecté en temps réel</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-[12px] text-green-600 font-medium">En ligne</span>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-500">
+                  <User size={48} className="mx-auto mb-3 text-gray-300" />
+                  <p className="text-[16px]">Aucun utilisateur en ligne</p>
+                  <p className="text-[14px] mt-1">Les utilisateurs apparaîtront ici lorsqu'ils seront actifs</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </motion.div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
@@ -97,7 +545,7 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => onNavigate('mailbox')}
+              onClick={() => handleNavigate('mailbox')}
               className="p-2 hover:bg-gray-50 rounded-full transition-colors"
             >
               <ArrowLeft size={20} className="text-gray-700" />
@@ -109,7 +557,7 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
 
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => onNavigate('mailbox')}
+              onClick={() => handleNavigate('mailbox')}
               className="hidden md:flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors text-[14px]"
             >
               <Mail size={16} />
@@ -131,7 +579,7 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
           <div className="p-4">
             <div className="mb-6 px-2">
               <div className="text-[12px] text-gray-500 mb-1">Connecté en tant que</div>
-              <div className="text-[14px] truncate">{contextUserEmail}</div>
+              <div className="text-[14px] truncate font-medium">{contextUserEmail || 'Chargement...'}</div>
             </div>
 
             <nav className="space-y-2">
@@ -699,9 +1147,9 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                         <p className="text-[14px] text-gray-600">Gérez votre plan Naeliv</p>
                       </div>
                       {settings.accountType === 'pro' ? (
-                        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full">
-                          <Zap size={16} />
-                          <span className="text-[14px]">NAELIV PRO</span>
+                        <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full">
+                          <Zap size={14} />
+                          <span className="text-[12px]">NAELIV PRO</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-full">
@@ -844,6 +1292,29 @@ export default function Settings({ onNavigate, userEmail = 'test@naeliv.com' }: 
                     </motion.button>
                   </div>
                 </div>
+              </motion.div>
+            )}
+
+            {/* Maintenance Section - Admin uniquement */}
+            {activeSection === 'maintenance' && contextUserEmail?.toLowerCase() === 'gabi@naeliv.com' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h1 className="text-[32px] mb-8">Maintenance</h1>
+                <AdminMaintenanceSection userEmail={contextUserEmail} />
+              </motion.div>
+            )}
+
+            {/* Live Users Section - Admin uniquement */}
+            {activeSection === 'live-users' && contextUserEmail?.toLowerCase() === 'gabi@naeliv.com' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <LiveUsersSection userEmail={contextUserEmail} />
               </motion.div>
             )}
           </div>

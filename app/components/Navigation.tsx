@@ -1,12 +1,231 @@
 ﻿"use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { Shield, X } from 'lucide-react';
+
+const ADMIN_EMAIL = 'gabi@naeliv.com';
 
 export function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState('');
+
+  useEffect(() => {
+    const checkMaintenance = async () => {
+      try {
+        const { data } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'maintenance_mode')
+          .single();
+        
+        setIsMaintenance((data as { value: string } | null)?.value === 'true');
+      } catch (error) {
+        console.error('Error checking maintenance:', error);
+      }
+    };
+
+    checkMaintenance();
+
+    // Écouter les changements en temps réel
+    const channel = supabase
+      .channel('maintenance-mode-nav')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'app_settings',
+          filter: 'key=eq.maintenance_mode',
+        },
+        (payload) => {
+          const newValue = (payload.new as { value: string } | null)?.value;
+          setIsMaintenance(newValue === 'true');
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, []);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminError('');
+    setAdminLoading(true);
+
+    // Vérifier que l'email est gabi@naeliv.com
+    if (adminEmail.toLowerCase().trim() !== ADMIN_EMAIL.toLowerCase()) {
+      setAdminError('Accès réservé aux administrateurs autorisés.');
+      setAdminLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: adminEmail.trim(),
+        password: adminPassword,
+      });
+
+      if (error) {
+        setAdminError('Email ou mot de passe incorrect.');
+        setAdminLoading(false);
+        return;
+      }
+
+      if (data.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+        // Connexion réussie, fermer la modal
+        setShowAdminModal(false);
+        setAdminEmail('');
+        setAdminPassword('');
+        
+        // Attendre un peu pour que la session soit bien établie
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Rediriger vers la page d'accueil avec un rechargement complet
+        // Cela permet au MaintenanceGuard de détecter l'admin et de permettre l'accès
+        window.location.href = '/';
+      } else {
+        setAdminError('Accès réservé aux administrateurs autorisés.');
+        await supabase.auth.signOut();
+      }
+    } catch (error: any) {
+      setAdminError('Une erreur est survenue. Veuillez réessayer.');
+      console.error('Admin login error:', error);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  // Si en maintenance, afficher uniquement le bouton Admin
+  if (isMaintenance) {
+    return (
+      <>
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-300 backdrop-blur-lg bg-opacity-95">
+          <div className="max-w-5xl mx-auto px-6 py-2 flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/">
+              <motion.div 
+                className="flex items-center gap-2 cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+              >
+                <span className="text-[24px] font-sans font-bold tracking-tight text-black">Naeliv</span>
+                <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-semibold rounded uppercase tracking-wide">
+                  BETA
+                </span>
+              </motion.div>
+            </Link>
+
+            {/* Bouton Admin uniquement */}
+            <motion.button
+              onClick={() => setShowAdminModal(true)}
+              className="px-6 py-2 bg-purple-600 text-white rounded-full text-[14px] font-medium flex items-center gap-2 shadow-lg hover:bg-purple-700 hover:shadow-xl transition-all"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Shield size={16} />
+              Admin
+            </motion.button>
+          </div>
+        </nav>
+
+        {/* Modal de connexion Admin */}
+        {showAdminModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 relative"
+            >
+              <button
+                onClick={() => {
+                  setShowAdminModal(false);
+                  setAdminError('');
+                  setAdminEmail('');
+                  setAdminPassword('');
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={24} />
+              </button>
+
+              <div className="mb-6">
+                <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield size={32} className="text-white" />
+                </div>
+                <h2 className="text-[28px] font-bold text-center text-black mb-2">
+                  Connexion Admin
+                </h2>
+                <p className="text-[14px] text-gray-600 text-center">
+                  Accès réservé aux administrateurs
+                </p>
+              </div>
+
+              <form onSubmit={handleAdminLogin} className="space-y-4">
+                <div>
+                  <label className="block text-[14px] font-medium text-gray-700 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={adminEmail}
+                    onChange={(e) => setAdminEmail(e.target.value)}
+                    placeholder="admin@naeliv.com"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-[14px] focus:outline-none focus:border-purple-600 transition-colors"
+                    required
+                    disabled={adminLoading}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[14px] font-medium text-gray-700 mb-2">
+                    Mot de passe
+                  </label>
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-[14px] focus:outline-none focus:border-purple-600 transition-colors"
+                    required
+                    disabled={adminLoading}
+                  />
+                </div>
+
+                {adminError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-[14px] text-red-600">
+                    {adminError}
+                  </div>
+                )}
+
+                <motion.button
+                  type="submit"
+                  disabled={adminLoading}
+                  className="w-full py-3 bg-purple-600 text-white rounded-xl text-[14px] font-medium hover:bg-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{ scale: adminLoading ? 1 : 1.02 }}
+                  whileTap={{ scale: adminLoading ? 1 : 0.98 }}
+                >
+                  {adminLoading ? 'Connexion...' : 'Se connecter'}
+                </motion.button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Navigation normale si pas en maintenance
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-300 backdrop-blur-lg bg-opacity-95">
       <div className="max-w-5xl mx-auto px-6 py-2 flex items-center justify-between">

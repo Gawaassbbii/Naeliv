@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply, Eye, Plus, Users, UserPlus, Sparkles, Wand2, GraduationCap } from 'lucide-react';
+import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply, Eye, Plus, Users, UserPlus, Sparkles, Wand2, GraduationCap, Key } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -260,6 +260,30 @@ function MailPageContent() {
       if (!isAdmin) {
         loadContacts();
       }
+      
+      // Tracker l'activité utilisateur (pour le compteur "Live users")
+      const updateUserActivity = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            await fetch('/api/user-activity', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+          }
+        } catch (error) {
+          // Ignorer les erreurs silencieusement (ne pas bloquer l'expérience utilisateur)
+          console.debug('Could not update user activity:', error);
+        }
+      };
+      
+      updateUserActivity();
+      // Mettre à jour l'activité toutes les 2 minutes
+      const activityInterval = setInterval(updateUserActivity, 2 * 60 * 1000);
+      return () => clearInterval(activityInterval);
     }
   }, [user, isAdmin]);
 
@@ -1516,10 +1540,187 @@ interface SidebarProps {
   onComposeNew: (email?: string) => void;
 }
 
+// Composant Admin Nav Item avec compteur en temps réel
+const AdminNavItem = React.memo(function AdminNavItem({ 
+  icon: Icon, 
+  label, 
+  router,
+  onlineCount 
+}: { 
+  icon: React.ComponentType<{ size?: number; className?: string }>; 
+  label: string; 
+  router: any;
+  onlineCount?: number;
+}) {
+  const handleClick = () => {
+    if (label === 'Live Users') {
+      router.push('/mail/admin/live');
+    } else if (label === 'Maintenance') {
+      router.push('/mail/admin/maintenance');
+    } else if (label === 'Bêta Access') {
+      router.push('/mail/admin/beta');
+    }
+  };
+
+  const isLiveUsers = label === 'Live Users';
+  const isMaintenance = label === 'Maintenance';
+  const isBetaAccess = label === 'Bêta Access';
+
+  return (
+    <motion.button
+      onClick={handleClick}
+      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group relative overflow-hidden ${
+        isLiveUsers
+          ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 hover:border-green-400 dark:hover:border-green-600 hover:shadow-lg'
+          : isMaintenance
+          ? 'bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 border border-orange-200 dark:border-orange-800 hover:border-orange-400 dark:hover:border-orange-600 hover:shadow-lg'
+          : isBetaAccess
+          ? 'bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600 hover:shadow-lg'
+          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+      }`}
+      whileHover={{ scale: 1.02, x: 2 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      {/* Effet de brillance au survol */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -translate-x-full group-hover:translate-x-full"></div>
+      
+      <div className="flex items-center gap-3 flex-1 relative z-10">
+        <motion.div
+          animate={isLiveUsers && onlineCount !== undefined && onlineCount > 0 ? {
+            scale: [1, 1.15, 1],
+          } : {}}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+          }}
+          className={`p-2 rounded-lg ${
+            isLiveUsers
+              ? 'bg-green-100 dark:bg-green-900/40'
+              : isMaintenance
+              ? 'bg-orange-100 dark:bg-orange-900/40'
+              : isBetaAccess
+              ? 'bg-purple-100 dark:bg-purple-900/40'
+              : 'bg-gray-100 dark:bg-gray-700'
+          }`}
+        >
+          <Icon 
+            size={20} 
+            className={
+              isLiveUsers
+                ? 'text-green-600 dark:text-green-400'
+                : isMaintenance
+                ? 'text-orange-600 dark:text-orange-400'
+                : isBetaAccess
+                ? 'text-purple-600 dark:text-purple-400'
+                : 'text-gray-600 dark:text-gray-400'
+            } 
+          />
+        </motion.div>
+        <span className={`text-[14px] font-medium ${
+          isLiveUsers
+            ? 'text-green-900 dark:text-green-200'
+            : isMaintenance
+            ? 'text-orange-900 dark:text-orange-200'
+            : isBetaAccess
+            ? 'text-purple-900 dark:text-purple-200'
+            : 'text-gray-700 dark:text-gray-300'
+        }`}>
+          {label}
+        </span>
+      </div>
+      
+      {isLiveUsers && onlineCount !== undefined && onlineCount > 0 && (
+        <motion.div
+          animate={{
+            scale: [1, 1.1, 1],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+          }}
+          className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full text-[11px] font-semibold shadow-md relative z-10"
+        >
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          <span>{onlineCount}</span>
+        </motion.div>
+      )}
+      
+      {isMaintenance && (
+        <div className="relative z-10">
+          <motion.div
+            animate={{
+              rotate: [0, 10, -10, 0],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+            }}
+            className="text-orange-500"
+          >
+            <AlertTriangle size={16} />
+          </motion.div>
+        </div>
+      )}
+    </motion.button>
+  );
+});
+
 // Memoize Sidebar to prevent unnecessary re-renders
 const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setActiveFolder, folderCounts, countVisibility, onComposeNew }: SidebarProps) {
   const { language } = useTheme();
   const t = translations[language];
+  const router = useRouter();
+  const [onlineUsersCount, setOnlineUsersCount] = useState(0);
+  
+  // Track les utilisateurs en ligne pour le badge (admin uniquement)
+  useEffect(() => {
+    if (user?.email?.toLowerCase() !== 'gabi@naeliv.com') {
+      return;
+    }
+
+    let channel: any = null;
+
+    const setupPresence = async () => {
+      try {
+        channel = supabase.channel('sidebar-online-users', {
+          config: {
+            presence: {
+              key: 'user_id',
+            },
+          },
+        });
+
+        channel.on('presence', { event: 'sync' }, () => {
+          const state = channel.presenceState();
+          let count = 0;
+
+          for (const [key, presences] of Object.entries(state)) {
+            if (Array.isArray(presences) && presences.length > 0) {
+              count++;
+            }
+          }
+
+          setOnlineUsersCount(count);
+        });
+
+        channel.subscribe(async (status: string) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ [Sidebar] Abonné au channel sidebar-online-users');
+          }
+        });
+      } catch (err: any) {
+        console.error('❌ [Sidebar] Erreur Presence:', err);
+      }
+    };
+
+    setupPresence();
+
+    return () => {
+      if (channel) {
+        channel.unsubscribe();
+      }
+    };
+  }, [user?.email]);
   
   // Valeurs par défaut pour folderCounts si undefined
   const safeFolderCounts = folderCounts || {
@@ -1627,6 +1828,32 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           <NavItem icon={Globe} label={t.immersion} />
           <NavItem icon={RotateCcw} label={t.rewind} />
         </div>
+
+        {/* Admin Section */}
+        {user?.email?.toLowerCase() === 'gabi@naeliv.com' && (
+          <>
+            <div className="my-4 border-t border-gray-300 dark:border-gray-700"></div>
+            <div className="mb-2">
+              <p className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2 px-4">ZONE ADMIN</p>
+              <AdminNavItem 
+                icon={Users} 
+                label="Live Users" 
+                router={router}
+                onlineCount={onlineUsersCount}
+              />
+              <AdminNavItem 
+                icon={AlertTriangle} 
+                label="Maintenance" 
+                router={router}
+              />
+              <AdminNavItem 
+                icon={Key} 
+                label="Bêta Access" 
+                router={router}
+              />
+            </div>
+          </>
+        )}
       </nav>
     </aside>
   );
@@ -4451,9 +4678,9 @@ function SettingsPanel({
                         <p className="text-[14px] text-gray-500">Gérez votre plan Naeliv</p>
                       </div>
                       {userPlan === 'pro' ? (
-                        <div className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-[14px] font-medium flex items-center gap-2">
-                          <Zap size={16} />
-                          <span>Naeliv PRO</span>
+                        <div className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full text-[12px] font-medium flex items-center gap-2">
+                          <Zap size={14} />
+                          <span>NAELIV PRO</span>
                         </div>
                       ) : (
                         <motion.button
