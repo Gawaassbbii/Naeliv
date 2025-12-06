@@ -714,6 +714,55 @@ function MailPageContent() {
     loadFolderCounts();
   };
 
+  // Toggle star with optimistic update
+  const handleToggleStar = async (emailIndex: number, e?: React.MouseEvent) => {
+    // Empêcher l'ouverture de l'email quand on clique sur l'étoile
+    if (e) {
+      e.stopPropagation();
+    }
+
+    const filteredEmails = getFilteredEmails();
+    const email = filteredEmails[emailIndex];
+    if (!email || !email.dbId) return;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const newStarredValue = !email.starred;
+
+    // Optimistic Update: Met à jour immédiatement l'état
+    setEmails(prevEmails => 
+      prevEmails.map(e => {
+        const matches = email.dbId ? e.dbId === email.dbId : e.id === email.id;
+        return matches ? { ...e, starred: newStarredValue } : e;
+      })
+    );
+
+    // Update in Supabase
+    const { error } = await supabase
+      .from('emails')
+      .update({ starred: newStarredValue })
+      .eq('id', email.dbId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error toggling star:', error);
+      // Revert optimistic update en cas d'erreur
+      setEmails(prevEmails => 
+        prevEmails.map(e => {
+          const matches = email.dbId ? e.dbId === email.dbId : e.id === email.id;
+          return matches ? { ...e, starred: !newStarredValue } : e;
+        })
+      );
+      toast.error('Erreur lors de la mise à jour du favori');
+    } else {
+      toast.success(newStarredValue ? 'Ajouté aux favoris' : 'Retiré des favoris');
+    }
+
+    // Recharger les compteurs
+    loadFolderCounts();
+  };
+
   // Delete email with optimistic update
   const handleDelete = async (emailIndex: number) => {
     const filteredEmails = getFilteredEmails();
@@ -1856,17 +1905,6 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
           onClick={() => setActiveFolder('trash')}
         />
 
-        {/* Separator */}
-        <div className="my-4 border-t border-gray-300 dark:border-gray-700"></div>
-
-        {/* Features Section */}
-        <div className="mb-2">
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2 px-4">FONCTIONNALITÉS</p>
-          <NavItem icon={Shield} label={t.premiumShield} />
-          <NavItem icon={Globe} label={t.immersion} />
-          <NavItem icon={RotateCcw} label={t.rewind} />
-        </div>
-
         {/* Admin Section */}
         {user?.email?.toLowerCase() === 'gabi@naeliv.com' && (
           <>
@@ -1946,7 +1984,8 @@ interface EmailListProps {
   };
 }
 
-function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoading = false, folderCounts }: EmailListProps) {
+function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoading = false, folderCounts, onToggleStar }: EmailListProps) {
+  const [hoveredEmailIndex, setHoveredEmailIndex] = useState<number | null>(null);
   const { language } = useTheme();
   const t = translations[language];
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -2037,7 +2076,7 @@ function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoadi
           return (
             <div
               key={email.id}
-              className={`p-4 cursor-pointer transition-colors relative ${
+              className={`p-4 cursor-pointer transition-colors relative group ${
                 selectedEmail === index 
                   ? 'bg-blue-50 dark:bg-blue-900/20' 
                   : !email.read
@@ -2045,6 +2084,8 @@ function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoadi
                   : 'hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
               onClick={() => onSelectEmail(index)}
+              onMouseEnter={() => setHoveredEmailIndex(index)}
+              onMouseLeave={() => setHoveredEmailIndex(null)}
             >
               <div className="flex items-start gap-3 min-w-0">
                 <div className="flex-1 min-w-0 overflow-hidden">
@@ -2082,8 +2123,25 @@ function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoadi
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      {email.starred && (
-                        <Star size={14} className="text-yellow-500 fill-yellow-500" />
+                      {/* Bouton étoile - visible au survol ou si déjà favori */}
+                      {(hoveredEmailIndex === index || email.starred) && onToggleStar && (
+                        <motion.button
+                          onClick={(e) => onToggleStar(index, e)}
+                          className={`p-1 rounded transition-colors ${
+                            email.starred 
+                              ? 'text-yellow-500 hover:text-yellow-600' 
+                              : 'text-gray-400 hover:text-yellow-500'
+                          }`}
+                          whileHover={{ scale: 1.2 }}
+                          whileTap={{ scale: 0.9 }}
+                          title={email.starred ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                        >
+                          <Star 
+                            size={16} 
+                            className={email.starred ? 'fill-yellow-500' : ''} 
+                            strokeWidth={email.starred ? 0 : 2}
+                          />
+                        </motion.button>
                       )}
                       {getDateDisplay() && (
                         <span className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
