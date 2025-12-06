@@ -2,21 +2,19 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Check, Zap, ArrowLeft, Shield, Globe, RotateCcw, Moon } from 'lucide-react';
+import { Check, Zap, ArrowLeft, Shield, Globe, RotateCcw, Moon, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-interface PricingPageProps {
-  onNavigate: (page: string) => void;
-}
-
-export default function PricingPage({ onNavigate }: PricingPageProps) {
+export default function PricingPage() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b border-gray-300 bg-white sticky top-0 z-40">
+      <header className="bg-white sticky top-0 z-40">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => onNavigate('settings')}
+              onClick={() => router.push('/')}
               className="p-2 hover:bg-gray-50 rounded-full transition-colors"
             >
               <ArrowLeft size={20} className="text-gray-700" />
@@ -62,7 +60,7 @@ export default function PricingPage({ onNavigate }: PricingPageProps) {
             <ul className="space-y-4 mb-8">
               <li className="flex items-start gap-3">
                 <Check size={20} className="text-green-600 mt-1 flex-shrink-0" />
-                <span className="text-[16px]">Adresse @naeliv.com</span>
+                <span className="text-[16px]">pseudo123@naeliv.com</span>
               </li>
               <li className="flex items-start gap-3">
                 <Check size={20} className="text-green-600 mt-1 flex-shrink-0" />
@@ -70,23 +68,27 @@ export default function PricingPage({ onNavigate }: PricingPageProps) {
               </li>
               <li className="flex items-start gap-3">
                 <Check size={20} className="text-green-600 mt-1 flex-shrink-0" />
-                <span className="text-[16px]">Zen Mode limité (2x/jour)</span>
+                <span className="text-[16px]">Zen Mode fixe (09h00 & 17h00)</span>
               </li>
               <li className="flex items-start gap-3">
                 <Check size={20} className="text-green-600 mt-1 flex-shrink-0" />
-                <span className="text-[16px]">Interface minimaliste</span>
+                <span className="text-[16px]">Smart Paywall (0,10€ par défaut)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={20} className="text-green-600 mt-1 flex-shrink-0" />
+                <span className="text-[16px]">Immersion Linguistique (Anglais)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={20} className="text-green-600 mt-1 flex-shrink-0" />
+                <span className="text-[16px]">Rewind Digital (annulation 10 secondes)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <Check size={20} className="text-green-600 mt-1 flex-shrink-0" />
+                <span className="text-[16px]">Détox Digitale (conservation des emails)</span>
               </li>
               <li className="flex items-start gap-3 opacity-50">
                 <Check size={20} className="text-gray-400 mt-1 flex-shrink-0" />
-                <span className="text-[16px] line-through">Smart Paywall</span>
-              </li>
-              <li className="flex items-start gap-3 opacity-50">
-                <Check size={20} className="text-gray-400 mt-1 flex-shrink-0" />
-                <span className="text-[16px] line-through">Immersion Linguistique</span>
-              </li>
-              <li className="flex items-start gap-3 opacity-50">
-                <Check size={20} className="text-gray-400 mt-1 flex-shrink-0" />
-                <span className="text-[16px] line-through">Rewind illimité</span>
+                <span className="text-[16px] line-through text-gray-400">Naeliv Intelligence</span>
               </li>
             </ul>
 
@@ -94,7 +96,7 @@ export default function PricingPage({ onNavigate }: PricingPageProps) {
               className="w-full px-8 py-4 border-2 border-black text-black rounded-full hover:bg-gray-50 transition-colors text-[16px]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => onNavigate('inscription')}
+              onClick={() => router.push('/inscription')}
             >
               Commencer gratuitement
             </motion.button>
@@ -154,20 +156,20 @@ export default function PricingPage({ onNavigate }: PricingPageProps) {
                 <Zap size={20} className="text-purple-600 mt-1 flex-shrink-0" />
                 <span className="text-[16px]"><strong>Détox Digitale</strong> • Priorisez vos contacts</span>
               </li>
+              <li className="flex items-start gap-3">
+                <Sparkles size={20} className="text-purple-600 mt-1 flex-shrink-0" />
+                <span className="text-[16px]"><strong>Naeliv Intelligence</strong> • TL;DR, Ghostwriter, Coach, Smart Sorter</span>
+              </li>
             </ul>
 
             <motion.button
               className="w-full px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full hover:opacity-90 transition-opacity text-[16px]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => onNavigate('inscription')}
+              onClick={() => router.push('/inscription')}
             >
               Passer à Naeliv PRO
             </motion.button>
-
-            <p className="text-center text-[12px] text-gray-600 mt-4">
-              Essai gratuit de 14 jours
-            </p>
           </motion.div>
         </div>
 
@@ -215,7 +217,7 @@ export default function PricingPage({ onNavigate }: PricingPageProps) {
             className="px-8 py-3 border border-black text-black rounded-full hover:bg-gray-50 transition-colors"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => onNavigate('contact')}
+            onClick={() => router.push('/contact')}
           >
             Contactez-nous
           </motion.button>

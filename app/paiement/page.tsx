@@ -186,7 +186,7 @@ export default function PaiementPage() {
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <Lock size={20} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                  <div>
+              <div>
                     <p className="text-[14px] font-medium text-blue-900 dark:text-blue-100 mb-1">
                       Paiement 100% sécurisé
                     </p>
@@ -194,7 +194,7 @@ export default function PaiementPage() {
                       Vos informations de paiement sont traitées par Stripe, leader mondial des paiements en ligne. 
                       Nous ne stockons jamais vos données bancaires.
                     </p>
-                  </div>
+                </div>
                 </div>
               </div>
 

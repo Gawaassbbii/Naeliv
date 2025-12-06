@@ -35,7 +35,8 @@ const pricingData = [
       { name: 'Smart Paywall', value: 'Gagnez des crédits + Prix personnalisable', available: true },
       { name: 'Adresse', value: 'Alias Premium (prenom@naeliv.com)', available: true },
       { name: 'Rewind', value: 'Illimité (Édition post-envoi)', available: true },
-      { name: 'Signature', value: 'Signature Pro sans pub', available: true }
+      { name: 'Signature', value: 'Signature Pro sans pub', available: true },
+      { name: 'Naeliv Intelligence', value: 'TL;DR, Ghostwriter, Coach, Smart Sorter, Réponse PRO', available: true }
     ],
     cta: 'Passer à PRO',
     highlight: true
@@ -68,7 +69,7 @@ export function Pricing({ onNavigate }: PricingProps) {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-[64px] leading-none tracking-tight mb-4 text-black">Tarification</h2>
+          <h2 className="text-[64px] leading-none font-sans font-bold tracking-tight mb-4 text-black">Tarification</h2>
           <p className="text-[20px] text-gray-700 max-w-2xl">
             Le modèle est Freemium. On attire avec le gratuit, on convertit avec le Pro.
           </p>

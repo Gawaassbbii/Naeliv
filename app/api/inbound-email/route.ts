@@ -16,6 +16,19 @@ import {
 import { detectSpam, isBlacklisted } from '@/lib/security/spam-detection';
 import { inboundEmailSchema } from '@/lib/validations/email';
 import { sanitizeEmailHTML } from '@/lib/utils/email-sanitize';
+import OpenAI from 'openai';
+
+// Initialiser OpenAI pour le Smart Sorter
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+
+// Log au démarrage (seulement pour vérifier la configuration)
+if (openai) {
+  console.log('✅ [INBOUND EMAIL] OpenAI configuré pour Smart Sorter');
+} else {
+  console.warn('⚠️ [INBOUND EMAIL] OpenAI non configuré - Smart Sorter désactivé');
+}
 
 // Configuration de sécurité
 const MAX_EMAIL_SIZE = 25 * 1024 * 1024; // 25MB
@@ -364,7 +377,7 @@ export async function POST(request: NextRequest) {
     
     const { data: profileData, error: profileErr } = await clientToUse
       .from('profiles')
-      .select('id, email, plan')
+      .select('id, email, plan, is_pro')
       .eq('email', targetEmail)
       .single();
     
@@ -383,11 +396,11 @@ export async function POST(request: NextRequest) {
       // Vérifier si l'utilisateur existe dans auth.users (peut-être que le profil n'a pas été créé)
       if (supabaseAdmin) {
         try {
-          const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
           const userExists = authUsers?.users?.find((u: any) => u.email?.toLowerCase() === targetEmail.toLowerCase());
           console.error('❌ [INBOUND EMAIL] Utilisateur dans auth.users:', userExists ? 'EXISTE ✅' : 'NON TROUVÉ ❌');
           
-          if (userExists && !authError) {
+        if (userExists && !authError) {
             console.error('⚠️ [INBOUND EMAIL] ⚠️  ATTENTION: L\'utilisateur existe dans auth.users mais PAS dans profiles!');
             console.error('⚠️ [INBOUND EMAIL] ID utilisateur:', userExists.id);
             console.error('⚠️ [INBOUND EMAIL] Email utilisateur:', userExists.email);
@@ -402,6 +415,7 @@ export async function POST(request: NextRequest) {
                   email: targetEmail,
                   username: username,
                   plan: 'pro', // Par défaut pour gabi@naeliv.com
+                  is_pro: true, // Également marquer comme PRO
                 })
                 .select()
                 .single();
@@ -420,7 +434,7 @@ export async function POST(request: NextRequest) {
             }
           } else if (!userExists) {
             console.error('❌ [INBOUND EMAIL] L\'utilisateur n\'existe même pas dans auth.users!');
-          }
+        }
         } catch (authErr: any) {
           console.error('❌ [INBOUND EMAIL] Erreur lors de la vérification auth.users:', authErr);
         }
@@ -429,13 +443,13 @@ export async function POST(request: NextRequest) {
       // Si le profil n'a toujours pas été trouvé ou créé, retourner une erreur
       if (!profile) {
         console.error('❌ [INBOUND EMAIL] ============================================');
-        // Ne pas révéler que l'utilisateur n'existe pas (sécurité)
-        // Mais on logue pour le débogage
-        return NextResponse.json(
-          { success: true, message: 'Email processed' },
-          { status: 200 }
-        );
-      }
+      // Ne pas révéler que l'utilisateur n'existe pas (sécurité)
+      // Mais on logue pour le débogage
+      return NextResponse.json(
+        { success: true, message: 'Email processed' },
+        { status: 200 }
+      );
+    }
     }
 
     console.log(`✅ [INBOUND EMAIL] User found: ${profile.email} (ID: ${profile.id})${isSystemAlias ? ' (via alias système)' : ''}`);
@@ -513,6 +527,48 @@ export async function POST(request: NextRequest) {
     // TODO: Implémenter la logique de paiement du timbre ici
     const hasPaidStamp = !isTrusted && false; // À implémenter selon votre logique
 
+    // 14.5. Smart Sorter - Catégorisation IA pour les membres PRO
+    let emailCategory: string | null = null;
+    // Vérifier si l'utilisateur est PRO : is_pro === true OU plan === 'pro'
+    const isPro = profile.is_pro === true || profile.plan === 'pro';
+    
+    if (isPro && (sanitizedData.textBody || sanitizedData.htmlBody)) {
+      if (!openai) {
+        console.warn('⚠️ [INBOUND EMAIL] OpenAI non configuré - Smart Sorter désactivé');
+      } else {
+        try {
+          const emailContent = (sanitizedData.textBody || sanitizedData.htmlBody?.replace(/<[^>]*>/g, '') || '').substring(0, 1000);
+          
+          const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+              { 
+                role: 'system', 
+                content: 'Catégorise cet email en un seul mot : "Finance", "Updates", "Personal", "Spam", ou "Work". Réponds uniquement avec le mot, rien d\'autre.' 
+              },
+              { 
+                role: 'user', 
+                content: `Sujet: ${modifiedSubject}\n\nContenu: ${emailContent}` 
+              }
+            ],
+            temperature: 0.3,
+            max_tokens: 10,
+          });
+
+          const category = completion.choices[0]?.message?.content?.trim();
+          if (category && ['Finance', 'Updates', 'Personal', 'Spam', 'Work'].includes(category)) {
+            emailCategory = category;
+            console.log(`✨ [INBOUND EMAIL] Email catégorisé: ${emailCategory}`);
+          } else {
+            console.warn(`⚠️ [INBOUND EMAIL] Catégorie invalide reçue: ${category}`);
+          }
+        } catch (error: any) {
+          console.error('❌ [INBOUND EMAIL] Erreur lors de la catégorisation IA:', error);
+          // Continuer même si la catégorisation échoue
+        }
+      }
+    }
+
     // 15. Stocker l'email dans Supabase
     // Utiliser le client admin (service role) pour contourner RLS, ou la fonction PostgreSQL
     let email: any;
@@ -535,6 +591,7 @@ export async function POST(request: NextRequest) {
           archived: false,
           deleted: false,
           starred: true, // Marquer automatiquement tous les nouveaux emails comme favoris
+          ...(emailCategory && { category: emailCategory }), // Ajouter la catégorie IA si disponible
         })
         .select()
         .single();

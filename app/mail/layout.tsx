@@ -1,6 +1,9 @@
-"use client";
+import type { Metadata } from "next";
 
-import { ThemeProvider } from "@/app/contexts/ThemeContext";
+export const metadata: Metadata = {
+  title: "Boîte mail — KLAR",
+  description: "Votre boîte mail KLAR",
+};
 
 export default function MailLayout({
   children,
@@ -8,10 +11,10 @@ export default function MailLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ThemeProvider>
+    <>
       {children}
       {/* Pas de Navigation ni Footer sur cette page */}
-    </ThemeProvider>
+    </>
   );
 }
 

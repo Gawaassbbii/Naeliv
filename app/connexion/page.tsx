@@ -242,7 +242,7 @@ export default function Connexion() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-[32px] tracking-tighter text-black font-medium mb-2">Naeliv</h1>
+          <h1 className="text-[32px] font-sans font-bold tracking-tight text-black mb-2">Naeliv</h1>
           <p className="text-[14px] text-gray-600">Connectez-vous pour continuer</p>
         </motion.div>
 
@@ -384,7 +384,10 @@ export default function Connexion() {
                 </form>
 
                 <div className="mt-6 text-center">
-                  <Link href="/inscription" className="text-[14px] text-purple-600 hover:text-purple-700 font-medium">
+                  <Link 
+                    href="/inscription" 
+                    className="inline-block text-[14px] text-purple-600 hover:text-purple-700 font-medium underline decoration-transparent hover:decoration-purple-700 transition-colors"
+                  >
                     Créer un compte
                   </Link>
                 </div>

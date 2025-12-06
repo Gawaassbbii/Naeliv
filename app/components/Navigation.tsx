@@ -9,14 +9,14 @@ export function Navigation() {
   const pathname = usePathname();
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-300 backdrop-blur-lg bg-opacity-95">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-5xl mx-auto px-6 py-2 flex items-center justify-between">
         {/* Logo */}
         <Link href="/">
           <motion.div 
             className="flex items-center gap-2 cursor-pointer"
             whileHover={{ scale: 1.02 }}
           >
-            <span className="text-[24px] tracking-tighter text-black font-medium">Naeliv</span>
+            <span className="text-[24px] font-sans font-bold tracking-tight text-black">Naeliv</span>
             <span className="px-2 py-0.5 bg-orange-500 text-white text-[10px] font-semibold rounded uppercase tracking-wide">
               BETA
             </span>
@@ -41,16 +41,29 @@ export function Navigation() {
               <Link href="/premium-shield"><button className="block w-full text-left px-4 py-2 text-[14px] text-gray-700 hover:bg-gray-50">Monétisation de l'Attention</button></Link>
               <Link href="/immersion-linguistique"><button className="block w-full text-left px-4 py-2 text-[14px] text-gray-700 hover:bg-gray-50">Immersion Linguistique</button></Link>
               <Link href="/detox-digitale"><button className="block w-full text-left px-4 py-2 text-[14px] text-gray-700 hover:bg-gray-50">Détox Digitale</button></Link>
-              <Link href="/rewind"><button className="block w-full text-left px-4 py-2 text-[14px] text-gray-700 hover:bg-gray-50 last:rounded-b-xl">Rewind</button></Link>
+              <Link href="/rewind"><button className="block w-full text-left px-4 py-2 text-[14px] text-gray-700 hover:bg-gray-50">Rewind</button></Link>
+              <Link href="/naeliv-intelligence"><button className="block w-full text-left px-4 py-2 text-[14px] text-gray-700 hover:bg-gray-50 last:rounded-b-xl">Naeliv Intelligence</button></Link>
             </div>
           </div>
           <Link href="/a-propos"><button className={`text-[14px] ${pathname === '/a-propos' ? 'text-black font-semibold' : 'text-gray-700 hover:text-black'} transition-colors`}>À propos</button></Link>
-          <Link href="/blog"><button className={`text-[14px] ${pathname === '/blog' ? 'text-black font-semibold' : 'text-gray-700 hover:text-black'} transition-colors`}>Blog</button></Link>
           <Link href="/contact"><button className={`text-[14px] ${pathname === '/contact' ? 'text-black font-semibold' : 'text-gray-700 hover:text-black'} transition-colors`}>Contact</button></Link>
         </div>
 
-        {/* CTA */}
+        {/* Prix & CTA */}
         <div className="flex items-center gap-3">
+          <Link href="/PricingPage">
+            <motion.button
+              className={`px-6 py-2 rounded-full text-[14px] font-medium transition-colors ${
+                pathname === '/PricingPage' 
+                  ? 'bg-purple-600 text-white' 
+                  : 'border-2 border-purple-600 text-purple-600 hover:bg-purple-50'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Tarifs
+            </motion.button>
+          </Link>
           <motion.button
             className="px-6 py-2 border border-black text-black rounded-full text-[14px] hover:bg-gray-50"
             whileHover={{ scale: 1.05 }}

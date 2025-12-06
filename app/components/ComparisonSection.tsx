@@ -37,7 +37,7 @@ export function ComparisonSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-[64px] leading-none tracking-tight mb-4">
+          <h2 className="text-[64px] leading-none font-sans font-bold tracking-tight mb-4 text-black">
             Gmail vs Naeliv
           </h2>
           <p className="text-[24px] text-gray-300">

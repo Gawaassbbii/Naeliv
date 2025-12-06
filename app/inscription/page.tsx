@@ -102,7 +102,7 @@ export default function Inscription() {
         }
         return;
       }
-      
+
       console.log('✅ [INSCRIPTION] Validation réussie');
       
       // Réinitialiser l'erreur de validation si la validation réussit
@@ -124,8 +124,8 @@ export default function Inscription() {
         if (existingProfile) {
           setEmailExistsError(true);
           setIsCheckingEmail(false);
-          return;
-        }
+        return;
+      }
 
         setIsCheckingEmail(false);
 
@@ -175,7 +175,7 @@ export default function Inscription() {
 
         while (!profileCreated && attempts < maxAttempts) {
           attempts++;
-          
+
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('id, email, username')
@@ -216,7 +216,7 @@ export default function Inscription() {
             err?.message?.toLowerCase().includes('exists')) {
           setEmailExistsError(true);
         } else {
-          alert('Une erreur est survenue lors de la création du compte');
+        alert('Une erreur est survenue lors de la création du compte');
         }
         setIsCheckingEmail(false);
       }
@@ -437,7 +437,7 @@ export default function Inscription() {
                       }
                       if (validationError) {
                         setValidationError('');
-                      }
+                    }
                     }}
                     className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-black focus:outline-none transition-colors"
                     placeholder="votre_nom"
@@ -511,7 +511,7 @@ export default function Inscription() {
                     // Réinitialiser l'erreur de validation si l'utilisateur modifie le mot de passe
                     if (validationError) {
                       setValidationError('');
-                    }
+                  }
                   }}
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-black focus:outline-none transition-colors"
                   placeholder="••••••••"
@@ -555,9 +555,9 @@ export default function Inscription() {
                 )}
                 
                 {!formData.password && (
-                  <p className="text-[12px] text-gray-500 mt-2">
-                    Minimum 8 caractères
-                  </p>
+                <p className="text-[12px] text-gray-500 mt-2">
+                  Minimum 8 caractères
+                </p>
                 )}
               </div>
 
@@ -574,7 +574,7 @@ export default function Inscription() {
                     // Réinitialiser l'erreur de validation si l'utilisateur modifie la confirmation
                     if (validationError) {
                       setValidationError('');
-                    }
+                  }
                   }}
                   className="w-full px-6 py-4 border-2 border-gray-300 rounded-xl focus:border-black focus:outline-none transition-colors"
                   placeholder="••••••••"
@@ -648,8 +648,8 @@ export default function Inscription() {
               ) : (
                 <>
                   <span>
-                    {step === 1 && 'Continuer'}
-                    {step === 2 && 'Créer mon compte'}
+              {step === 1 && 'Continuer'}
+              {step === 2 && 'Créer mon compte'}
                   </span>
                   <ArrowRight size={18} />
                 </>

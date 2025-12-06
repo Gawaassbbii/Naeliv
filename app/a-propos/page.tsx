@@ -3,8 +3,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Target, Heart, Globe, Zap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function APropos() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-white pt-24">
       <div className="max-w-5xl mx-auto px-6 py-16">
@@ -121,6 +123,7 @@ export default function APropos() {
             className="px-8 py-4 bg-white text-black rounded-full text-[16px]"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => router.push('/inscription')}
           >
             Commencer gratuitement
           </motion.button>

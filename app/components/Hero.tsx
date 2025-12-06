@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { EmailMockup } from './EmailMockup';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface HeroProps {
   onNavigate: (page: string) => void;
@@ -14,7 +15,7 @@ export function Hero({ onNavigate }: HeroProps) {
   const [emailName, setEmailName] = useState('');
 
   return (
-    <header className="min-h-screen flex flex-col items-center justify-center px-6 py-12 border-b border-gray-300 relative overflow-hidden bg-white">
+    <header className="min-h-screen flex flex-col items-center justify-center px-6 py-8 border-b border-gray-300 relative overflow-hidden bg-white">
       {/* Animated background shapes */}
       <motion.div 
         className="absolute top-20 right-20 w-64 h-64 rounded-full bg-blue-500 opacity-10"
@@ -47,12 +48,18 @@ export function Hero({ onNavigate }: HeroProps) {
           <div>
             {/* Logo */}
             <motion.div 
-              className="mb-8"
+              className="mb-3"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <h1 className="text-[120px] leading-none tracking-tighter text-black font-medium">Naeliv</h1>
+              <Image
+                src="/logo.png"
+                alt="Naeliv Logo"
+                width={220}
+                height={80}
+                priority
+              />
             </motion.div>
 
             {/* Slogan */}
@@ -62,9 +69,9 @@ export function Hero({ onNavigate }: HeroProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <p className="text-[48px] leading-tight tracking-tight text-black">
+              <h1 className="text-[48px] leading-tight font-sans font-bold tracking-tight text-black">
                 L'Email, en toute clarté.
-              </p>
+              </h1>
             </motion.div>
 
             {/* Description */}

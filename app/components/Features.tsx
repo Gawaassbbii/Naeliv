@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import React from 'react';
-import { Clock, Shield, Brain, Trash2, RotateCcw, Coins } from 'lucide-react';
+import { Clock, Shield, Brain, Trash2, RotateCcw, Coins, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -59,6 +59,16 @@ const features = [
     benefit: 'Contrôle total de son image professionnelle.',
     color: '#9900FF',
     page: 'rewind'
+  },
+  {
+    icon: Sparkles,
+    number: '06',
+    title: 'Naeliv Intelligence',
+    subtitle: 'IA Premium',
+    description: 'TL;DR pour résumer vos emails, Ghostwriter pour rédiger des réponses professionnelles, Coach pour corriger vos fautes et Smart Sorter pour catégoriser automatiquement vos messages.',
+    benefit: 'Boostez votre productivité avec l\'intelligence artificielle.',
+    color: '#EC4899',
+    page: 'naeliv-intelligence'
   }
 ];
 
@@ -90,7 +100,7 @@ export function Features({ onNavigate }: FeaturesProps) {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="text-[64px] leading-none tracking-tight mb-4 text-black">Les 5 Piliers</h2>
+          <h2 className="text-[64px] leading-none font-sans font-bold tracking-tight mb-4 text-black">Les 6 Piliers</h2>
           <p className="text-[20px] text-gray-700 max-w-2xl">
             Une boîte mail qui ne vous dérange pas, qui se nettoie toute seule et qui vous apprend des choses.
           </p>
@@ -131,7 +141,7 @@ export function Features({ onNavigate }: FeaturesProps) {
               {/* Right: Content */}
               <div>
                 <div className="mb-2">
-                  <h3 className="text-[40px] leading-none tracking-tight mb-1 text-black">
+                  <h3 className="text-[40px] leading-none font-sans font-bold tracking-tight mb-1 text-black">
                     {feature.title}
                   </h3>
                   <p className="text-[16px] text-gray-500 tracking-wide uppercase">

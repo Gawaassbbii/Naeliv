@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply, Eye, Plus } from 'lucide-react';
+import { Mail, Search, Settings, LogOut, Inbox, Archive, Trash2, Star, Send, Shield, Globe, RotateCcw, Zap, Bell, Moon, Sun, Languages, ArrowLeft, User, Lock, CreditCard, ChevronRight, AlertTriangle, CheckCircle, Trash, Check, X, Reply, Eye, Plus, Users, UserPlus, Sparkles, Wand2, GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -20,6 +20,121 @@ const ANIMATION_DURATION = {
   fast: 0.3,
   normal: 0.6,
   slow: 0.8,
+};
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+// Helper: Générer les initiales à partir d'un nom
+const getInitials = (name: string | null | undefined): string => {
+  if (!name) return '';
+  const words = name.trim().split(/\s+/);
+  if (words.length >= 2) {
+    return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
+// Helper: Générer une couleur de fond à partir d'un nom (pour l'avatar)
+const getAvatarColor = (name: string | null | undefined): string => {
+  if (!name) return '#6B7280'; // Gris par défaut
+  
+  // Liste de couleurs prédéfinies
+  const colors = [
+    '#EF4444', // Rouge
+    '#F59E0B', // Orange
+    '#10B981', // Vert
+    '#3B82F6', // Bleu
+    '#8B5CF6', // Violet
+    '#EC4899', // Rose
+    '#06B6D4', // Cyan
+    '#84CC16', // Lime
+  ];
+  
+  // Générer un index basé sur le nom
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
+// Helper: Extraire le tag du sujet (ex: "[SECURITY]" -> "SECURITY")
+const extractTagFromSubject = (subject: string | null | undefined): { tag: string | null; cleanSubject: string } => {
+  if (!subject) return { tag: null, cleanSubject: subject || '' };
+  
+  const match = subject.match(/^\[([A-Z]+)\]\s*(.*)$/);
+  if (match) {
+    return {
+      tag: match[1],
+      cleanSubject: match[2] || subject
+    };
+  }
+  
+  return { tag: null, cleanSubject: subject };
+};
+
+// Helper: Obtenir les classes CSS pour un tag système
+const getEmailTagColor = (tag: string | null): { bg: string; text: string; border: string } => {
+  if (!tag) {
+    return {
+      bg: 'bg-gray-100 dark:bg-gray-800',
+      text: 'text-gray-600 dark:text-gray-400',
+      border: 'border-gray-200 dark:border-gray-700'
+    };
+  }
+  
+  const tagUpper = tag.toUpperCase();
+  
+  // Tags rouges (urgents/sécurité)
+  if (['SECURITY', 'ABUSE', 'ALERT', 'POSTMASTER', 'WEBMASTER', 'HOSTMASTER', 'ADMIN', 'ADMINISTRATOR', 'NOC'].includes(tagUpper)) {
+    return {
+      bg: 'bg-red-100 dark:bg-red-900/20',
+      text: 'text-red-700 dark:text-red-400',
+      border: 'border-red-200 dark:border-red-800'
+    };
+  }
+  
+  // Tags bleus (support)
+  if (['SUPPORT', 'HELP', 'CONTACT', 'INFO', 'HELLO', 'TEAM'].includes(tagUpper)) {
+    return {
+      bg: 'bg-blue-100 dark:bg-blue-900/20',
+      text: 'text-blue-700 dark:text-blue-400',
+      border: 'border-blue-200 dark:border-blue-800'
+    };
+  }
+  
+  // Tags verts (business)
+  if (['BILLING', 'SALES', 'INVOICE'].includes(tagUpper)) {
+    return {
+      bg: 'bg-emerald-100 dark:bg-emerald-900/20',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      border: 'border-emerald-200 dark:border-emerald-800'
+    };
+  }
+  
+  // Tags gris (info/noreply)
+  if (['NOREPLY', 'NO-REPLY', 'NOTIFICATIONS', 'WELCOME', 'LEGAL', 'PRIVACY', 'COMPLIANCE', 'PRESS', 'MEDIA', 'JOBS', 'CAREERS'].includes(tagUpper)) {
+    return {
+      bg: 'bg-gray-100 dark:bg-gray-800',
+      text: 'text-gray-600 dark:text-gray-400',
+      border: 'border-gray-200 dark:border-gray-700'
+    };
+  }
+  
+  // Par défaut : gris
+  return {
+    bg: 'bg-gray-100 dark:bg-gray-800',
+    text: 'text-gray-600 dark:text-gray-400',
+    border: 'border-gray-200 dark:border-gray-700'
+  };
+};
+
+// Helper: Vérifier si un email est un email système (contient un tag)
+const isSystemEmail = (subject: string | null | undefined): boolean => {
+  if (!subject) return false;
+  return /^\[[A-Z]+\]/.test(subject);
 };
 
 // ============================================================================
@@ -73,8 +188,13 @@ function MailPageContent() {
   const [user, setUser] = useState<any>(null);
   const [userPlan, setUserPlan] = useState<'essential' | 'pro'>('essential');
   const [aliasPurchased, setAliasPurchased] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSystemTag, setActiveSystemTag] = useState<string | null>(null);
+  const [showContacts, setShowContacts] = useState(false);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
   const [activeFolder, setActiveFolder] = useState<'inbox' | 'starred' | 'archived' | 'trash' | 'sent' | 'replied'>('inbox');
   const [isLoading, setIsLoading] = useState(true);
   const [emails, setEmails] = useState<any[]>([]);
@@ -91,6 +211,12 @@ function MailPageContent() {
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showComposeAIMenu, setShowComposeAIMenu] = useState(false);
+  const [isGeneratingComposeDraft, setIsGeneratingComposeDraft] = useState(false);
+  const [isFixingComposeText, setIsFixingComposeText] = useState(false);
+  const [showProGenerator, setShowProGenerator] = useState(false);
+  const [proGeneratorText, setProGeneratorText] = useState('');
+  const [isGeneratingProResponse, setIsGeneratingProResponse] = useState(false);
   
   // Préférences de visibilité des compteurs (localStorage)
   const [countVisibility, setCountVisibility] = useState<Record<string, boolean>>(() => {
@@ -131,13 +257,18 @@ function MailPageContent() {
     if (user) {
       loadEmails(activeFolder);
       loadFolderCounts();
+      if (!isAdmin) {
+        loadContacts();
+      }
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   // Recharger les emails quand le dossier actif change
   useEffect(() => {
     if (user) {
       loadEmails(activeFolder);
+      // Réinitialiser le filtre de tag système lors du changement de dossier
+      setActiveSystemTag(null);
     }
   }, [activeFolder]);
 
@@ -151,17 +282,23 @@ function MailPageContent() {
       // Récupérer le plan et l'état d'achat d'alias depuis Supabase
       const { data: profile } = await supabase
         .from('profiles')
-        .select('plan, alias_purchased')
+        .select('plan, is_pro, alias_purchased')
         .eq('id', user.id)
         .single();
       
-      if (profile?.plan) {
-        setUserPlan(profile.plan as 'essential' | 'pro');
+      // Déterminer le plan : PRO si is_pro est true OU si plan est 'pro'
+      if (profile?.is_pro === true || profile?.plan === 'pro') {
+        setUserPlan('pro');
+      } else {
+        setUserPlan('essential');
       }
       
       if (profile?.alias_purchased) {
         setAliasPurchased(profile.alias_purchased);
       }
+      
+      // Vérifier si l'utilisateur est admin (gabi@naeliv.com)
+      setIsAdmin(user.email?.toLowerCase() === 'gabi@naeliv.com');
     }
   };
 
@@ -252,6 +389,8 @@ function MailPageContent() {
         return {
           id: email.id,
           from: email.from_name || email.from_email,
+          from_name: email.from_name || null,
+          from_email: email.from_email || null,
           subject: email.subject,
           preview: email.preview || body?.substring(0, 100) || '',
           time: new Date(email.received_at || email.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
@@ -277,6 +416,33 @@ function MailPageContent() {
     }
 
     setIsLoading(false);
+  };
+
+  // Load contacts from Supabase
+  const loadContacts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setIsLoadingContacts(true);
+    try {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name', { ascending: true, nullsFirst: false })
+        .order('email', { ascending: true });
+
+      if (error) {
+        console.error('❌ [CONTACTS] Error loading contacts:', error);
+        return;
+      }
+
+      setContacts(data || []);
+    } catch (error) {
+      console.error('❌ [CONTACTS] Unexpected error:', error);
+    } finally {
+      setIsLoadingContacts(false);
+    }
   };
 
   // Load folder counts from Supabase (all folders at once)
@@ -452,10 +618,20 @@ function MailPageContent() {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(e => 
+        (e.from_name?.toLowerCase().includes(query) || false) ||
+        (e.from_email?.toLowerCase().includes(query) || false) ||
         e.from.toLowerCase().includes(query) ||
         e.subject.toLowerCase().includes(query) ||
         e.preview.toLowerCase().includes(query)
       );
+    }
+
+    // Filter by system tag (admin only)
+    if (activeSystemTag) {
+      filtered = filtered.filter(e => {
+        const { tag } = extractTagFromSubject(e.subject);
+        return tag?.toUpperCase() === activeSystemTag.toUpperCase();
+      });
     }
 
     return filtered;
@@ -586,11 +762,178 @@ function MailPageContent() {
   };
 
   // Handle compose new message
-  const handleComposeNew = () => {
+  const handleComposeNew = (toEmail?: string) => {
     setIsComposeOpen(true);
-    setComposeTo('');
+    setComposeTo(toEmail || '');
     setComposeSubject('');
     setComposeBody('');
+    setShowComposeAIMenu(false);
+    setShowProGenerator(true); // Afficher le générateur PRO par défaut pour les membres PRO
+    setProGeneratorText('');
+  };
+
+  // Fonction pour générer une réponse avec l'IA dans le modal de composition
+  const handleGenerateComposeDraft = async (intention: string) => {
+    if (userPlan !== 'pro') {
+      toast.error('Fonctionnalité réservée aux membres Naeliv PRO.');
+      return;
+    }
+
+    // Pour "Rendre PRO", vérifier qu'il y a du texte
+    if (intention === 'Rendre PRO' && !composeBody.trim()) {
+      toast.error('Écrivez d\'abord votre message avant de le rendre plus professionnel.');
+      return;
+    }
+
+    setIsGeneratingComposeDraft(true);
+    setShowComposeAIMenu(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      // Pour "Rendre PRO", utiliser le texte existant dans composeBody
+      const textToImprove = intention === 'Rendre PRO' ? composeBody.trim() : '';
+
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          type: 'draft',
+          data: { 
+            originalEmail: intention === 'Rendre PRO' ? '' : '',
+            intention,
+            existingText: textToImprove // Passer le texte existant pour "Rendre PRO"
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la génération');
+      }
+
+      // Insérer le texte généré dans le champ de composition
+      setComposeBody(data.text);
+      toast.success(intention === 'Rendre PRO' ? 'Texte rendu plus professionnel' : 'Message généré avec succès');
+    } catch (error: any) {
+      console.error('Erreur lors de la génération:', error);
+      toast.error(error.message || 'Erreur lors de la génération');
+    } finally {
+      setIsGeneratingComposeDraft(false);
+    }
+  };
+
+  // Fonction pour corriger le texte dans le modal de composition
+  const handleFixComposeText = async () => {
+    if (userPlan !== 'pro') {
+      toast.error('Fonctionnalité réservée aux membres Naeliv PRO.');
+      return;
+    }
+
+    if (!composeBody.trim()) {
+      toast.error('Aucun texte à corriger');
+      return;
+    }
+
+    setIsFixingComposeText(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          type: 'fix',
+          data: { text: composeBody }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la correction');
+      }
+
+      // Utiliser directement le texte corrigé (sans extraire d'explications)
+      const correctedText = data.text.trim();
+
+      // Remplacer le texte
+      setComposeBody(correctedText);
+
+      toast.success('Correction effectuée');
+    } catch (error: any) {
+      console.error('Erreur lors de la correction:', error);
+      toast.error(error.message || 'Erreur lors de la correction');
+    } finally {
+      setIsFixingComposeText(false);
+    }
+  };
+
+  // Fonction pour générer une réponse PRO à partir d'un texte collé
+  const handleGenerateProResponse = async () => {
+    if (userPlan !== 'pro') {
+      toast.error('Fonctionnalité réservée aux membres Naeliv PRO.');
+      return;
+    }
+
+    if (!proGeneratorText.trim()) {
+      toast.error('Collez d\'abord le texte pour lequel vous voulez générer une réponse.');
+      return;
+    }
+
+    setIsGeneratingProResponse(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          type: 'draft',
+          data: { 
+            originalEmail: proGeneratorText.trim(),
+            intention: 'Réponse PRO personnalisée',
+            isProResponse: true // Flag pour indiquer que c'est une réponse PRO
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la génération');
+      }
+
+      // Insérer le texte généré dans le champ de composition
+      setComposeBody(data.text);
+      toast.success('Réponse PRO générée avec succès');
+    } catch (error: any) {
+      console.error('Erreur lors de la génération:', error);
+      toast.error(error.message || 'Erreur lors de la génération');
+    } finally {
+      setIsGeneratingProResponse(false);
+    }
   };
 
   const handleSendNewMessage = async () => {
@@ -732,18 +1075,60 @@ function MailPageContent() {
             folderCounts={folderCounts}
           />
 
-          {/* Email Viewer - Scrollable */}
-          <EmailViewer 
-            email={selectedEmail !== null ? getFilteredEmails()[selectedEmail] : null}
-            emailIndex={selectedEmail}
-            activeFolder={activeFolder}
-            onArchive={handleArchive}
-            onDelete={handleDelete}
-            onReply={handleReply}
-            onForward={handleForward}
-            loadEmails={loadEmails}
-            loadFolderCounts={loadFolderCounts}
-          />
+          {/* Email Viewer - Scrollable (réduit si System Monitor est affiché) */}
+          <div className={isAdmin ? "flex-1" : "flex-1"}>
+            <EmailViewer 
+              email={selectedEmail !== null ? getFilteredEmails()[selectedEmail] : null}
+              emailIndex={selectedEmail}
+              activeFolder={activeFolder}
+              onArchive={handleArchive}
+              onDelete={handleDelete}
+              onReply={handleReply}
+              onForward={handleForward}
+              loadEmails={loadEmails}
+              loadFolderCounts={loadFolderCounts}
+            />
+          </div>
+          
+          {/* System Monitor - Colonne de droite pour l'admin */}
+          {isAdmin && (
+            <SystemMonitor
+              emails={emails}
+              activeSystemTag={activeSystemTag}
+              onTagSelect={setActiveSystemTag}
+            />
+          )}
+
+          {/* Contacts Panel - Colonne de droite pour les utilisateurs non-admin */}
+          {!isAdmin && showContacts && (
+            <ContactsPanel
+              contacts={contacts}
+              isLoading={isLoadingContacts}
+              onClose={() => setShowContacts(false)}
+              onComposeNew={handleComposeNew}
+              onContactAdded={loadContacts}
+            />
+          )}
+
+          {/* Bouton pour ouvrir les contacts (non-admin uniquement) */}
+          {!isAdmin && !showContacts && (
+            <div className="w-16 flex-shrink-0 h-full flex items-center justify-center border-l border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+              <motion.button
+                onClick={() => {
+                  setShowContacts(true);
+                  if (contacts.length === 0) {
+                    loadContacts();
+                  }
+                }}
+                className="p-3 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Afficher les contacts"
+              >
+                <Users size={20} className="text-gray-600 dark:text-gray-400" />
+              </motion.button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -754,8 +1139,11 @@ function MailPageContent() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden"
           >
+            <div className="flex h-full overflow-hidden">
+              {/* Panneau gauche : Nouveau message */}
+              <div className="flex-1 flex flex-col border-r border-gray-200 dark:border-gray-700">
             {/* Header */}
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h2 className="text-[20px] font-semibold text-black dark:text-white">Nouveau message</h2>
@@ -797,9 +1185,71 @@ function MailPageContent() {
               </div>
 
               <div>
-                <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Message
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300">
+                    Message
+                  </label>
+                  {userPlan === 'pro' && (
+                    <div className="flex items-center gap-2">
+                      <div className="relative ai-menu-container">
+                        <motion.button
+                          onClick={() => setShowComposeAIMenu(!showComposeAIMenu)}
+                          disabled={isGeneratingComposeDraft}
+                          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/20 border border-purple-200/50 dark:border-purple-700/50 rounded-full text-purple-700 dark:text-purple-300 text-[13px] font-medium hover:from-purple-100 hover:to-pink-100 dark:hover:from-purple-900/40 dark:hover:to-pink-900/30 hover:border-purple-300 dark:hover:border-purple-600 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Wand2 size={15} className="text-purple-600 dark:text-purple-400" />
+                          <span className="flex items-center gap-1">
+                            <span>✨</span>
+                            <span>IA Magic</span>
+                          </span>
+                        </motion.button>
+                        {showComposeAIMenu && (
+                          <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-xl z-50 min-w-[180px]">
+                            <button
+                              onClick={() => handleGenerateComposeDraft('Réponse positive')}
+                              className="w-full text-left px-4 py-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-xl"
+                            >
+                              Réponse positive
+                            </button>
+                            <button
+                              onClick={() => handleGenerateComposeDraft('Refus poli')}
+                              className="w-full text-left px-4 py-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                              Refus poli
+                            </button>
+                            <button
+                              onClick={() => handleGenerateComposeDraft('Demander détails')}
+                              className="w-full text-left px-4 py-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                              Demander détails
+                            </button>
+                            <button
+                              onClick={() => handleGenerateComposeDraft('Rendre PRO')}
+                              className="w-full text-left px-4 py-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 last:rounded-b-xl"
+                            >
+                              Rendre PRO
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <motion.button
+                        onClick={handleFixComposeText}
+                        disabled={isFixingComposeText || !composeBody.trim()}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50 rounded-full text-blue-700 dark:text-blue-300 text-[13px] font-medium hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/40 dark:hover:to-indigo-900/30 hover:border-blue-300 dark:hover:border-blue-600 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <GraduationCap size={15} className="text-blue-600 dark:text-blue-400" />
+                        <span className="flex items-center gap-1">
+                          <span>🎓</span>
+                          <span>Corriger</span>
+                        </span>
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
                 <textarea
                   value={composeBody}
                   onChange={(e) => setComposeBody(e.target.value)}
@@ -822,39 +1272,88 @@ function MailPageContent() {
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
-              <motion.button
-                onClick={() => setIsComposeOpen(false)}
-                className="px-6 py-2 border border-gray-300 dark:border-gray-700 rounded-xl text-[14px] hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={isSending}
-              >
-                Annuler
-              </motion.button>
-              <motion.button
-                onClick={handleSendNewMessage}
-                disabled={isSending || !composeTo || !composeSubject || !composeBody.trim()}
-                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-[14px] font-medium hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                whileHover={{ scale: isSending ? 1 : 1.02 }}
-                whileTap={{ scale: isSending ? 1 : 0.98 }}
-              >
-                {isSending ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Envoi...
-                  </>
-                ) : (
-                  <>
-                    <Send size={16} />
-                    Envoyer
-                  </>
-                )}
-              </motion.button>
+                {/* Footer */}
+                <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
+                  <motion.button
+                    onClick={() => setIsComposeOpen(false)}
+                    className="px-6 py-2 border border-gray-300 dark:border-gray-700 rounded-xl text-[14px] hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={isSending}
+                  >
+                    Annuler
+                  </motion.button>
+                  <motion.button
+                    onClick={handleSendNewMessage}
+                    disabled={isSending || !composeTo || !composeSubject || !composeBody.trim()}
+                    className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-[14px] font-medium hover:from-purple-700 hover:to-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    whileHover={{ scale: isSending ? 1 : 1.02 }}
+                    whileTap={{ scale: isSending ? 1 : 0.98 }}
+                  >
+                    {isSending ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Envoi...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        Envoyer
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Panneau droit : Générateur PRO */}
+              {userPlan === 'pro' && (
+                <div className="w-96 flex-shrink-0 flex flex-col border-l border-gray-200 dark:border-gray-700">
+                  {/* Header */}
+                  <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h2 className="text-[16px] font-semibold text-black dark:text-white">Introduisez le texte pour générer une réponse PRO</h2>
+                    <button
+                      onClick={() => setShowProGenerator(!showProGenerator)}
+                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      {showProGenerator ? <X size={20} /> : <Plus size={20} />}
+                    </button>
+                  </div>
+
+                  {showProGenerator && (
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                      {/* Textarea */}
+                      <div className="flex-1 p-6 overflow-y-auto">
+                        <textarea
+                          value={proGeneratorText}
+                          onChange={(e) => setProGeneratorText(e.target.value)}
+                          placeholder="Collez ici le texte pour lequel vous souhaitez générer une réponse PRO..."
+                          className="w-full h-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-[14px] bg-white dark:bg-gray-800 text-black dark:text-white resize-none"
+                          rows={15}
+                        />
+                      </div>
+
+                      {/* Footer */}
+                      <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+                        <motion.button
+                          onClick={handleGenerateProResponse}
+                          disabled={isGeneratingProResponse || !proGeneratorText.trim()}
+                          className="w-full h-10 min-h-[40px] max-h-[40px] px-4 bg-purple-600 text-white rounded-xl text-[14px] font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap"
+                          whileHover={{ scale: isGeneratingProResponse ? 1 : 1.02 }}
+                          whileTap={{ scale: isGeneratingProResponse ? 1 : 0.98 }}
+                          animate={isGeneratingProResponse ? { opacity: [1, 0.7, 1] } : {}}
+                          transition={isGeneratingProResponse ? { duration: 1.5, repeat: Infinity } : {}}
+                        >
+                          <Sparkles size={16} className="flex-shrink-0" />
+                          <span className="text-[14px]">Générer réponse PRO</span>
+                        </motion.button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         </div>
@@ -1014,7 +1513,7 @@ interface SidebarProps {
     replied: number;
   };
   countVisibility: Record<string, boolean>;
-  onComposeNew: () => void;
+  onComposeNew: (email?: string) => void;
 }
 
 // Memoize Sidebar to prevent unnecessary re-renders
@@ -1064,7 +1563,7 @@ const Sidebar = React.memo(function Sidebar({ user, userPlan, activeFolder, setA
       {/* Compose Button */}
       <div className="p-4">
         <motion.button
-          onClick={onComposeNew}
+          onClick={() => onComposeNew()}
           className="w-full px-4 py-3 bg-black dark:bg-white text-white dark:text-black rounded-full text-[14px] font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -1292,9 +1791,30 @@ function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoadi
                       {email.hasPaidStamp && (
                         <Shield size={14} className="text-blue-600 flex-shrink-0" strokeWidth={2.5} />
                       )}
-                      <p className={`text-[14px] truncate min-w-0 ${!email.read ? 'font-bold text-black dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                        {email.from}
-                      </p>
+                      {/* Avatar avec initiales */}
+                      <div 
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-white text-[14px] font-semibold flex-shrink-0"
+                        style={{ backgroundColor: getAvatarColor(email.from_name || email.from_email) }}
+                      >
+                        {getInitials(email.from_name || email.from_email)}
+                      </div>
+                      {/* Nom et email */}
+                      <div className="flex-1 min-w-0">
+                        {email.from_name ? (
+                          <>
+                            <p className={`text-[14px] truncate min-w-0 ${!email.read ? 'font-bold text-black dark:text-white' : 'font-semibold text-black dark:text-white'}`}>
+                              {email.from_name}
+                            </p>
+                            <p className="text-[12px] text-gray-500 dark:text-gray-400 truncate min-w-0">
+                              {email.from_email}
+                            </p>
+                          </>
+                        ) : (
+                          <p className={`text-[14px] truncate min-w-0 ${!email.read ? 'font-bold text-black dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                            {email.from_email || email.from}
+                          </p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       {email.starred && (
@@ -1307,9 +1827,24 @@ function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoadi
                       )}
                     </div>
                   </div>
-                  <p className={`text-[14px] truncate mb-1 min-w-0 ${!email.read ? 'font-semibold text-black dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                    {email.subject}
-                  </p>
+                  <div className="flex items-center gap-2 mb-1 min-w-0">
+                    {(() => {
+                      const { tag, cleanSubject } = extractTagFromSubject(email.subject);
+                      const tagColors = getEmailTagColor(tag);
+                      return (
+                        <>
+                          {tag && (
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border flex-shrink-0 ${tagColors.bg} ${tagColors.text} ${tagColors.border}`}>
+                              {tag}
+                            </span>
+                          )}
+                          <p className={`text-[14px] truncate flex-1 min-w-0 ${!email.read ? 'font-semibold text-black dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                            {cleanSubject}
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </div>
                   <p className="text-[12px] text-gray-500 dark:text-gray-400 line-clamp-2 mb-1 min-w-0 break-words">{email.preview}</p>
                   
                   {/* Days remaining badge */}
@@ -1356,6 +1891,35 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
   const [forwardTo, setForwardTo] = useState('');
   const [forwardSubject, setForwardSubject] = useState('');
   const [forwardBody, setForwardBody] = useState('');
+  const [emailSummary, setEmailSummary] = useState<string | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [showAIMenu, setShowAIMenu] = useState(false);
+  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
+  const [isFixingText, setIsFixingText] = useState(false);
+  const [userPlan, setUserPlan] = useState<'essential' | 'pro'>('essential');
+  
+  // Récupérer le plan de l'utilisateur
+  useEffect(() => {
+    const fetchUserPlan = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_pro, plan')
+          .eq('id', user.id)
+          .single();
+        if (profile) {
+          // Déterminer le plan : PRO si is_pro est true OU si plan est 'pro'
+          if (profile.is_pro === true || profile.plan === 'pro') {
+            setUserPlan('pro');
+          } else {
+            setUserPlan('essential');
+          }
+        }
+      }
+    };
+    fetchUserPlan();
+  }, []);
   
   useEffect(() => {
     if (email) {
@@ -1374,7 +1938,23 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
     setForwardTo('');
     setForwardSubject('');
     setForwardBody('');
+    setEmailSummary(null);
+    setShowAIMenu(false);
   }, [email?.id]);
+
+  // Fermer le menu IA quand on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.ai-menu-container')) {
+        setShowAIMenu(false);
+      }
+    };
+    if (showAIMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showAIMenu]);
 
   const handleReplyClick = () => {
     if (!email) return;
@@ -1542,6 +2122,179 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
     setForwardBody('');
   };
 
+  // Fonction pour générer le résumé TL;DR
+  const handleGenerateSummary = async () => {
+    if (!email) return;
+    
+    if (userPlan !== 'pro') {
+      toast.error('Fonctionnalité réservée aux membres Naeliv PRO.');
+      return;
+    }
+
+    setIsGeneratingSummary(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      const emailBody = email.body || email.body_html || email.preview || '';
+      if (!emailBody) {
+        toast.error('Aucun contenu à résumer');
+        return;
+      }
+
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          type: 'summary',
+          data: { emailBody: emailBody.replace(/<[^>]*>/g, '') } // Enlever le HTML
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la génération du résumé');
+      }
+
+      setEmailSummary(data.text);
+      toast.success('Résumé généré avec succès');
+    } catch (error: any) {
+      console.error('Erreur lors de la génération du résumé:', error);
+      toast.error(error.message || 'Erreur lors de la génération du résumé');
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  // Fonction pour générer une réponse avec l'IA
+  const handleGenerateDraft = async (intention: string) => {
+    if (userPlan !== 'pro') {
+      toast.error('Fonctionnalité réservée aux membres Naeliv PRO.');
+      return;
+    }
+
+    // Pour "Rendre PRO", vérifier qu'il y a du texte
+    const currentText = isReplying ? replyBody : isForwarding ? forwardBody : '';
+    if (intention === 'Rendre PRO' && !currentText.trim()) {
+      toast.error('Écrivez d\'abord votre message avant de le rendre plus professionnel.');
+      return;
+    }
+
+    setIsGeneratingDraft(true);
+    setShowAIMenu(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      const originalEmail = email ? `${email.subject}\n\n${email.body || email.preview || ''}` : '';
+      // Pour "Rendre PRO", utiliser le texte existant dans replyBody ou forwardBody
+      const textToImprove = intention === 'Rendre PRO' ? currentText.trim() : '';
+      
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          type: 'draft',
+          data: { 
+            originalEmail: intention === 'Rendre PRO' ? '' : originalEmail.replace(/<[^>]*>/g, ''),
+            intention,
+            existingText: textToImprove // Passer le texte existant pour "Rendre PRO"
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la génération');
+      }
+
+      // Insérer le texte généré dans le champ de réponse
+      if (isReplying) {
+        setReplyBody(data.text);
+      } else if (isForwarding) {
+        setForwardBody(data.text);
+      }
+      toast.success(intention === 'Rendre PRO' ? 'Texte rendu plus professionnel' : 'Réponse générée avec succès');
+    } catch (error: any) {
+      console.error('Erreur lors de la génération:', error);
+      toast.error(error.message || 'Erreur lors de la génération');
+    } finally {
+      setIsGeneratingDraft(false);
+    }
+  };
+
+  // Fonction pour corriger le texte
+  const handleFixText = async () => {
+    if (userPlan !== 'pro') {
+      toast.error('Fonctionnalité réservée aux membres Naeliv PRO.');
+      return;
+    }
+
+    const currentText = isReplying ? replyBody : isForwarding ? forwardBody : '';
+    if (!currentText.trim()) {
+      toast.error('Aucun texte à corriger');
+      return;
+    }
+
+    setIsFixingText(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          type: 'fix',
+          data: { text: currentText }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la correction');
+      }
+
+      // Utiliser directement le texte corrigé (sans extraire d'explications)
+      const correctedText = data.text.trim();
+
+      // Remplacer le texte
+      if (isReplying) {
+        setReplyBody(correctedText);
+      } else if (isForwarding) {
+        setForwardBody(correctedText);
+      }
+
+      toast.success('Correction effectuée');
+    } catch (error: any) {
+      console.error('Erreur lors de la correction:', error);
+      toast.error(error.message || 'Erreur lors de la correction');
+    } finally {
+      setIsFixingText(false);
+    }
+  };
+
   if (!email) {
     return (
       <div className="flex-1 h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
@@ -1559,16 +2312,95 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
     >
       <div className="max-w-4xl mx-auto p-8 w-full">
         <div className="mb-6">
-          <h1 className="text-[32px] font-bold mb-4 text-black dark:text-white">{email.subject}</h1>
-          <div className="flex items-center gap-4 text-[14px] text-gray-600 dark:text-gray-400">
-            <div>
-              <p className="font-semibold text-black dark:text-white">{email.from}</p>
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            {(() => {
+              const { tag, cleanSubject } = extractTagFromSubject(email.subject);
+              const tagColors = getEmailTagColor(tag);
+              return (
+                <>
+                  {tag && (
+                    <span className={`px-3 py-1 rounded-full text-[12px] font-semibold border flex-shrink-0 ${tagColors.bg} ${tagColors.text} ${tagColors.border}`}>
+                      {tag}
+                    </span>
+                  )}
+                  <h1 className="text-[32px] font-bold text-black dark:text-white">{cleanSubject}</h1>
+                </>
+              );
+            })()}
+          </div>
+          <div className="flex items-center gap-4 text-[14px]">
+            <div className="flex items-center gap-3 flex-1">
+              {/* Avatar avec initiales */}
+              <div 
+                className="w-16 h-16 rounded-full flex items-center justify-center text-white text-[18px] font-semibold flex-shrink-0"
+                style={{ backgroundColor: getAvatarColor(email.from_name || email.from_email) }}
+              >
+                {getInitials(email.from_name || email.from_email)}
+              </div>
+              {/* Nom et email */}
+              <div className="flex-1 min-w-0">
+                {email.from_name ? (
+                  <>
+                    <p className="font-bold text-black dark:text-white text-[16px]">
+                      {email.from_name}
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400 text-[14px]">
+                      {email.from_email}
+                    </p>
+                  </>
+                ) : (
+                  <p className="font-bold text-black dark:text-white text-[16px]">
+                    {email.from_email || email.from}
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="ml-auto text-gray-500 dark:text-gray-400">
+            <div className="ml-auto text-gray-500 dark:text-gray-400 text-[14px] whitespace-nowrap">
               {email.date} {email.time && `à ${email.time}`}
             </div>
           </div>
         </div>
+
+        {/* Bouton TL;DR */}
+        {userPlan === 'pro' && (
+          <div className="mb-4 flex justify-end">
+            <motion.button
+              onClick={handleGenerateSummary}
+              disabled={isGeneratingSummary}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-full text-purple-700 dark:text-purple-300 text-[14px] hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors disabled:opacity-50"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Sparkles size={16} />
+              {isGeneratingSummary ? 'Génération...' : '✨ Résumer'}
+            </motion.button>
+          </div>
+        )}
+
+        {/* Résumé généré */}
+        {emailSummary && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl"
+          >
+            <div className="flex items-start justify-between mb-2">
+              <h3 className="text-[14px] font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                <Sparkles size={16} />
+                Résumé
+              </h3>
+              <button
+                onClick={() => setEmailSummary(null)}
+                className="text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="text-[14px] text-purple-800 dark:text-purple-200 whitespace-pre-line">
+              {emailSummary}
+            </div>
+          </motion.div>
+        )}
 
         <div className="prose max-w-none">
           {email.body_html ? (
@@ -1623,9 +2455,68 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
                 />
               </div>
               <div>
-                <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Message
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300">
+                    Message
+                  </label>
+                  {userPlan === 'pro' && (
+                    <div className="flex items-center gap-2">
+                      <div className="relative ai-menu-container">
+                        <motion.button
+                          onClick={() => setShowAIMenu(!showAIMenu)}
+                          disabled={isGeneratingDraft}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-full text-purple-700 dark:text-purple-300 text-[12px] hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors disabled:opacity-50"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Wand2 size={14} />
+                          ✨ IA Magic
+                        </motion.button>
+                        {showAIMenu && (
+                          <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl shadow-xl z-50 min-w-[180px]">
+                            <button
+                              onClick={() => handleGenerateDraft('Réponse positive')}
+                              className="w-full text-left px-4 py-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-xl"
+                            >
+                              Réponse positive
+                            </button>
+                            <button
+                              onClick={() => handleGenerateDraft('Refus poli')}
+                              className="w-full text-left px-4 py-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                              Refus poli
+                            </button>
+                            <button
+                              onClick={() => handleGenerateDraft('Demander détails')}
+                              className="w-full text-left px-4 py-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                              Demander détails
+                            </button>
+                            <button
+                              onClick={() => handleGenerateDraft('Rendre PRO')}
+                              className="w-full text-left px-4 py-2 text-[13px] hover:bg-gray-50 dark:hover:bg-gray-700 last:rounded-b-xl"
+                            >
+                              Rendre PRO
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <motion.button
+                        onClick={handleFixText}
+                        disabled={isFixingText || !replyBody.trim()}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/20 border border-blue-200/50 dark:border-blue-700/50 rounded-full text-blue-700 dark:text-blue-300 text-[13px] font-medium hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/40 dark:hover:to-indigo-900/30 hover:border-blue-300 dark:hover:border-blue-600 transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <GraduationCap size={15} className="text-blue-600 dark:text-blue-400" />
+                        <span className="flex items-center gap-1">
+                          <span>🎓</span>
+                          <span>Corriger</span>
+                        </span>
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
                 <textarea
                   value={replyBody}
                   onChange={(e) => setReplyBody(e.target.value)}
@@ -1690,9 +2581,23 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
                 />
               </div>
               <div>
-                <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Message
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300">
+                    Message
+                  </label>
+                  {userPlan === 'pro' && (
+                    <motion.button
+                      onClick={handleFixText}
+                      disabled={isFixingText || !forwardBody.trim()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-full text-purple-700 dark:text-purple-300 text-[12px] hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors disabled:opacity-50"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <GraduationCap size={14} />
+                      🎓 Corriger
+                    </motion.button>
+                  )}
+                </div>
                 <textarea
                   value={forwardBody}
                   onChange={(e) => setForwardBody(e.target.value)}
@@ -1809,6 +2714,513 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// CONTACTS PANEL (Non-Admin Only)
+// ============================================================================
+
+interface ContactsPanelProps {
+  contacts: any[];
+  isLoading: boolean;
+  onClose: () => void;
+  onComposeNew: (email?: string) => void;
+  onContactAdded?: () => void;
+}
+
+function ContactsPanel({ contacts, isLoading, onClose, onComposeNew, onContactAdded }: ContactsPanelProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [suggestedContacts, setSuggestedContacts] = useState<any[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+
+  // Charger les suggestions au montage du composant
+  useEffect(() => {
+    loadSuggestedContacts();
+  }, [contacts]);
+
+  const loadSuggestedContacts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setIsLoadingSuggestions(true);
+    try {
+      // Récupérer les 20 derniers emails envoyés
+      const { data: sentEmails, error } = await supabase
+        .from('emails')
+        .select('to_email')
+        .eq('user_id', user.id)
+        .eq('folder', 'sent')
+        .not('to_email', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) {
+        console.error('❌ [CONTACTS] Error loading suggestions:', error);
+        return;
+      }
+
+      // Extraire les emails uniques qui ne sont pas déjà dans les contacts
+      const contactEmails = new Set(contacts.map(c => c.email.toLowerCase()));
+      const uniqueEmails = new Map<string, { email: string; name: string | null }>();
+
+      sentEmails?.forEach((email: any) => {
+        // to_email peut être un array ou une string
+        const toEmails = Array.isArray(email.to_email) ? email.to_email : [email.to_email];
+        
+        toEmails.forEach((toEmail: string) => {
+          if (!toEmail) return;
+          
+          const emailLower = toEmail.toLowerCase().trim();
+          if (emailLower && !contactEmails.has(emailLower) && !uniqueEmails.has(emailLower)) {
+            // Chercher le nom dans les contacts existants si possible
+            const existingContact = contacts.find(c => c.email.toLowerCase() === emailLower);
+            uniqueEmails.set(emailLower, {
+              email: toEmail,
+              name: existingContact?.name || null
+            });
+          }
+        });
+      });
+
+      // Limiter à 5 suggestions
+      setSuggestedContacts(Array.from(uniqueEmails.values()).slice(0, 5));
+    } catch (error) {
+      console.error('❌ [CONTACTS] Unexpected error loading suggestions:', error);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  };
+
+  const filteredContacts = contacts.filter(contact => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      (contact.name?.toLowerCase().includes(query) || false) ||
+      contact.email.toLowerCase().includes(query)
+    );
+  });
+
+  const handleContactClick = (email: string) => {
+    onComposeNew(email);
+    onClose();
+  };
+
+  const handleAddContact = async () => {
+    if (!newContactEmail || !newContactEmail.includes('@')) {
+      toast.error('Veuillez entrer une adresse email valide');
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .insert({
+          user_id: user.id,
+          email: newContactEmail.toLowerCase().trim(),
+          name: newContactName.trim() || null,
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('Ce contact existe déjà');
+        } else {
+          console.error('❌ [CONTACTS] Error adding contact:', error);
+          toast.error('Erreur lors de l\'ajout du contact');
+        }
+        return;
+      }
+
+      toast.success('Contact ajouté avec succès');
+      setNewContactName('');
+      setNewContactEmail('');
+      setShowAddForm(false);
+      
+      // Recharger les contacts
+      if (onContactAdded) {
+        onContactAdded();
+      }
+    } catch (error) {
+      console.error('❌ [CONTACTS] Unexpected error:', error);
+      toast.error('Erreur lors de l\'ajout du contact');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddSuggestedContact = async (email: string, name: string | null) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .insert({
+          user_id: user.id,
+          email: email.toLowerCase().trim(),
+          name: name || null,
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('Ce contact existe déjà');
+        } else {
+          console.error('❌ [CONTACTS] Error adding suggested contact:', error);
+          toast.error('Erreur lors de l\'ajout');
+        }
+        return;
+      }
+
+      toast.success('Contact ajouté');
+      // Retirer de la liste des suggestions
+      setSuggestedContacts(prev => prev.filter(s => s.email.toLowerCase() !== email.toLowerCase()));
+      
+      // Recharger les contacts
+      if (onContactAdded) {
+        onContactAdded();
+      }
+    } catch (error) {
+      console.error('❌ [CONTACTS] Unexpected error:', error);
+      toast.error('Erreur lors de l\'ajout');
+    }
+  };
+
+  return (
+    <div className="w-96 flex-shrink-0 h-full overflow-y-auto border-l border-y border-black/10 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors flex flex-col shadow-xl">
+      <div className="p-4 border-b border-gray-300 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10" style={{ minHeight: '72px', willChange: 'auto' }}>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-[18px] font-bold text-black dark:text-white">Contacts</h2>
+          <motion.button
+            onClick={onClose}
+            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            <X size={18} className="text-gray-600 dark:text-gray-400" />
+          </motion.button>
+        </div>
+        <div className="h-4 flex items-center" style={{ minHeight: '16px' }}>
+          <p className="text-[12px] text-gray-500 dark:text-gray-400 flex items-baseline gap-1">
+            {contacts.length} contact{contacts.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="relative mb-3">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Rechercher un contact..."
+            className="w-full pl-12 pr-3 py-2 border border-gray-200 dark:border-gray-700 rounded-full text-[14px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-900 text-black dark:text-white"
+          />
+        </div>
+        {!showAddForm && (
+          <motion.button
+            onClick={() => setShowAddForm(true)}
+            className="w-full px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-full text-[14px] font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <UserPlus size={16} />
+            <span>Ajouter</span>
+          </motion.button>
+        )}
+        {showAddForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-3 space-y-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700"
+          >
+            <input
+              type="text"
+              value={newContactName}
+              onChange={(e) => setNewContactName(e.target.value)}
+              placeholder="Nom (optionnel)"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white"
+            />
+            <input
+              type="email"
+              value={newContactEmail}
+              onChange={(e) => setNewContactEmail(e.target.value)}
+              placeholder="Email *"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white bg-white dark:bg-gray-800 text-black dark:text-white"
+            />
+            <div className="flex items-center gap-2">
+              <motion.button
+                onClick={handleAddContact}
+                disabled={isSaving || !newContactEmail}
+                className="flex-1 px-4 py-2 bg-black dark:bg-white text-white dark:text-black rounded-lg text-[14px] font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: isSaving ? 1 : 1.02 }}
+                whileTap={{ scale: isSaving ? 1 : 0.98 }}
+              >
+                {isSaving ? 'Ajout...' : 'Sauvegarder'}
+              </motion.button>
+              <motion.button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setNewContactName('');
+                  setNewContactEmail('');
+                }}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-[14px] hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Annuler
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black dark:border-white"></div>
+        </div>
+      ) : (
+        <>
+          {filteredContacts.length === 0 && !searchQuery ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center">
+                <Users size={32} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                <p className="text-[14px] text-gray-500 dark:text-gray-400">
+                  Aucun contact
+                </p>
+              </div>
+            </div>
+          ) : filteredContacts.length === 0 && searchQuery ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center">
+                <Search size={32} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                <p className="text-[14px] text-gray-500 dark:text-gray-400">
+                  Aucun contact trouvé
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredContacts.map((contact) => (
+                <motion.div
+                  key={contact.id}
+                  onClick={() => handleContactClick(contact.email)}
+                  className="p-3 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Avatar avec initiales */}
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[12px] font-semibold flex-shrink-0"
+                      style={{ backgroundColor: getAvatarColor(contact.name || contact.email) }}
+                    >
+                      {getInitials(contact.name || contact.email)}
+                    </div>
+                    {/* Nom et email */}
+                    <div className="flex-1 min-w-0">
+                      {contact.name ? (
+                        <>
+                          <p className="text-[14px] font-semibold text-black dark:text-white truncate">
+                            {contact.name}
+                          </p>
+                          <p className="text-[12px] text-gray-500 dark:text-gray-400 truncate">
+                            {contact.email}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-[14px] font-semibold text-black dark:text-white truncate">
+                          {contact.email}
+                        </p>
+                      )}
+                    </div>
+                    {contact.is_trusted && (
+                      <Shield size={14} className="text-green-600 dark:text-green-400 flex-shrink-0" />
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Section Suggestions */}
+          {!searchQuery && (contacts.length === 0 || suggestedContacts.length > 0) && (
+            <div className="border-t border-gray-300 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900">
+              <h3 className="text-[14px] font-semibold text-black dark:text-white mb-3">
+                Suggérés
+              </h3>
+              {isLoadingSuggestions ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-black dark:border-white"></div>
+                </div>
+              ) : suggestedContacts.length === 0 ? (
+                <p className="text-[12px] text-gray-500 dark:text-gray-400 text-center py-2">
+                  Aucune suggestion
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {suggestedContacts.map((suggestion, index) => (
+                    <motion.div
+                      key={`${suggestion.email}-${index}`}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        {suggestion.name ? (
+                          <>
+                            <p className="text-[13px] font-medium text-black dark:text-white truncate">
+                              {suggestion.name}
+                            </p>
+                            <p className="text-[12px] text-gray-500 dark:text-gray-400 truncate">
+                              {suggestion.email}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-[13px] font-medium text-black dark:text-white truncate">
+                            {suggestion.email}
+                          </p>
+                        )}
+                      </div>
+                      <motion.button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddSuggestedContact(suggestion.email, suggestion.name);
+                        }}
+                        className="p-1.5 rounded-full bg-black dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex-shrink-0"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <Plus size={14} />
+                      </motion.button>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// SYSTEM MONITOR (Admin Only)
+// ============================================================================
+
+interface SystemMonitorProps {
+  emails: any[];
+  activeSystemTag: string | null;
+  onTagSelect: (tag: string | null) => void;
+}
+
+function SystemMonitor({ emails, activeSystemTag, onTagSelect }: SystemMonitorProps) {
+  // Filtrer les emails système (avec tags)
+  const systemEmails = emails.filter(email => isSystemEmail(email.subject));
+  
+  // Compter les emails par tag
+  const tagCounts: Record<string, number> = {};
+  systemEmails.forEach(email => {
+    const { tag } = extractTagFromSubject(email.subject);
+    if (tag) {
+      const tagUpper = tag.toUpperCase();
+      tagCounts[tagUpper] = (tagCounts[tagUpper] || 0) + 1;
+    }
+  });
+
+  // Trier les tags par nombre d'emails (décroissant), puis par nom
+  const sortedTags = Object.entries(tagCounts)
+    .sort((a, b) => {
+      // D'abord par nombre d'emails (décroissant)
+      if (b[1] !== a[1]) {
+        return b[1] - a[1];
+      }
+      // Puis par nom alphabétique
+      return a[0].localeCompare(b[0]);
+    })
+    .map(([tag, count]) => ({ tag, count }));
+
+  const handleTagClick = (tag: string) => {
+    // Si le tag est déjà actif, le désélectionner
+    if (activeSystemTag?.toUpperCase() === tag.toUpperCase()) {
+      onTagSelect(null);
+    } else {
+      onTagSelect(tag);
+    }
+  };
+
+  return (
+    <div className="w-80 flex-shrink-0 h-full overflow-y-auto border-l border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 transition-colors">
+      <div className="p-4 border-b border-gray-300 dark:border-gray-700 sticky top-0 bg-gray-50 dark:bg-gray-900 z-10">
+        <h2 className="text-[18px] font-bold text-black dark:text-white mb-1">Flux Système</h2>
+        <p className="text-[12px] text-gray-500 dark:text-gray-400">
+          {systemEmails.length} email{systemEmails.length !== 1 ? 's' : ''} système
+        </p>
+      </div>
+
+      {sortedTags.length === 0 ? (
+        <div className="p-8 text-center">
+          <Mail size={32} className="text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+          <p className="text-[14px] text-gray-500 dark:text-gray-400">Aucun email système</p>
+        </div>
+      ) : (
+        <div className="p-4 space-y-2">
+          {sortedTags.map(({ tag, count }) => {
+            const tagColors = getEmailTagColor(tag);
+            const isActive = activeSystemTag?.toUpperCase() === tag.toUpperCase();
+            
+            return (
+              <motion.button
+                key={tag}
+                onClick={() => handleTagClick(tag)}
+                className={`w-full p-3 rounded-lg text-left transition-colors border-2 ${
+                  isActive
+                    ? `${tagColors.bg} ${tagColors.border} ${tagColors.text}`
+                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded-full text-[12px] font-semibold border ${tagColors.bg} ${tagColors.text} ${tagColors.border}`}>
+                      {tag}
+                    </span>
+                    {isActive && (
+                      <span className="text-[11px] text-gray-600 dark:text-gray-400 font-medium">
+                        (actif)
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-[14px] font-bold ${isActive ? tagColors.text : 'text-gray-700 dark:text-gray-300'}`}>
+                    {count}
+                  </span>
+                </div>
+              </motion.button>
+            );
+          })}
+          
+          {/* Bouton pour réinitialiser le filtre */}
+          {activeSystemTag && (
+            <motion.button
+              onClick={() => onTagSelect(null)}
+              className="w-full p-3 rounded-lg bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-[14px] font-medium"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Afficher tous les emails
+            </motion.button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -2469,8 +3881,82 @@ function SettingsPanel({
                                 // Messages d'erreur spécifiques selon le type d'erreur
                                 if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('not found')) {
                                   toast.error('Le bucket "avatars" n\'existe pas. Veuillez le créer dans Supabase Storage (voir la documentation).');
-                                } else if (uploadError.message?.includes('new row violates row-level security')) {
-                                  toast.error('Erreur de permissions. Vérifiez les politiques RLS du bucket "avatars".');
+                                } else if (uploadError.message?.includes('new row violates row-level security') || uploadError.message?.includes('row-level security')) {
+                                  // Afficher un message détaillé avec option de création automatique
+                                  console.error('❌ [AVATAR UPLOAD] Erreur RLS détectée.');
+                                  
+                                  // Demander à l'utilisateur s'il veut créer automatiquement les politiques
+                                  const shouldAutoSetup = confirm(
+                                    '⚠️ Erreur de permissions RLS\n\n' +
+                                    'SOLUTION RAPIDE (2 minutes) :\n\n' +
+                                    '1️⃣ Ouvrez Supabase Dashboard → SQL Editor\n' +
+                                    '2️⃣ Ouvrez le fichier : executer dans sql/setup_avatars_rls_function.sql\n' +
+                                    '3️⃣ Copiez-collez tout le contenu et cliquez sur "Run"\n' +
+                                    '4️⃣ Revenez ici et cliquez "OK" pour créer automatiquement les politiques\n\n' +
+                                    'Souhaitez-vous que j\'essaie de créer les politiques maintenant ?\n\n' +
+                                    '(Si la fonction n\'existe pas encore, suivez les étapes ci-dessus d\'abord)'
+                                  );
+                                  
+                                  if (shouldAutoSetup) {
+                                    try {
+                                      toast.info('Création des politiques RLS en cours...', { duration: 5000 });
+                                      
+                                      const setupResponse = await fetch('/api/storage/setup-avatars-rls', {
+                                        method: 'POST'
+                                      });
+                                      
+                                      const setupData = await setupResponse.json();
+                                      
+                                      if (setupData.success) {
+                                        toast.success('✅ Politiques RLS créées avec succès ! Réessayez d\'uploader votre photo.', { duration: 8000 });
+                                        console.log('✅ [AVATAR UPLOAD] Politiques RLS créées automatiquement');
+                                      } else {
+                                        // Si la fonction exec_sql n'existe pas, donner les instructions
+                                        if (setupData.message?.includes('fonction') || setupData.instructions) {
+                                          toast.error('La fonction SQL nécessaire n\'existe pas encore.', { duration: 8000 });
+                                          alert(
+                                            '⚠️ Étape préalable requise\n\n' +
+                                            'Pour activer la création automatique, exécutez d\'abord ce script SQL dans Supabase SQL Editor :\n\n' +
+                                            '📄 Fichier : executer dans sql/setup_avatars_rls_function.sql\n\n' +
+                                            '1. Ouvrez Supabase Dashboard → SQL Editor\n' +
+                                            '2. Ouvrez le fichier mentionné ci-dessus\n' +
+                                            '3. Copiez-collez tout le contenu dans l\'éditeur SQL\n' +
+                                            '4. Cliquez sur "Run"\n\n' +
+                                            'Ensuite, réessayez d\'uploader votre photo.\n\n' +
+                                            'OU créez les politiques manuellement :\n' +
+                                            'Dashboard → Storage → Policies → avatars\n\n' +
+                                            '📖 Guide : docs/GUIDE_RLS_AVATARS_SIMPLE.md'
+                                          );
+                                        } else {
+                                          toast.error('Impossible de créer les politiques automatiquement. Veuillez suivre le guide manuel.', { duration: 8000 });
+                                          console.log('📋 Instructions manuelles :', setupData.instructions || setupData.message);
+                                        }
+                                      }
+                                    } catch (setupError: any) {
+                                      console.error('❌ [AVATAR UPLOAD] Erreur lors de la création automatique:', setupError);
+                                      toast.error('Erreur lors de la création automatique. Veuillez suivre le guide manuel.', { duration: 8000 });
+                                      alert(
+                                        '❌ Erreur lors de la création automatique\n\n' +
+                                        'Veuillez créer les politiques manuellement :\n\n' +
+                                        '1. Ouvrez Supabase Dashboard\n' +
+                                        '2. Allez dans Storage → Policies\n' +
+                                        '3. Sélectionnez le bucket "avatars"\n' +
+                                        '4. Créez les 4 politiques manuellement\n\n' +
+                                        '📖 Guide simple : docs/GUIDE_RLS_AVATARS_SIMPLE.md'
+                                      );
+                                    }
+                                  } else {
+                                    // Afficher les instructions manuelles
+                                    toast.error(
+                                      'Erreur de permissions RLS. Les politiques de sécurité doivent être configurées.',
+                                      { duration: 10000 }
+                                    );
+                                    console.log('📋 SOLUTION MANUELLE :');
+                                    console.log('1. Ouvrez Supabase Dashboard → Storage → Policies');
+                                    console.log('2. Sélectionnez le bucket "avatars"');
+                                    console.log('3. Créez les 4 politiques manuellement (voir guide)');
+                                    console.log('📖 Guide détaillé : docs/GUIDE_RLS_AVATARS_SIMPLE.md');
+                                  }
                                 } else if (uploadError.message?.includes('File size exceeds maximum')) {
                                   toast.error('Le fichier est trop volumineux (max 5MB)');
                                 } else {
@@ -3034,6 +4520,10 @@ function SettingsPanel({
                           <div className="flex items-center gap-2">
                             <Check size={18} className="text-green-500 flex-shrink-0" />
                             <span className="text-[14px] text-gray-700">Détox Digitale</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Check size={18} className="text-green-500 flex-shrink-0" />
+                            <span className="text-[14px] text-gray-700">Naeliv Intelligence (IA)</span>
                           </div>
                         </>
                       ) : (

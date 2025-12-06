@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const faqs = [
   {
@@ -135,10 +136,6 @@ const faqs = [
         q: 'Puis-je annuler à tout moment ?',
         a: 'Oui, sans engagement. Vous pouvez annuler votre abonnement PRO depuis les paramètres à tout moment. Vous restez PRO jusqu\'à la fin de votre période payée.'
       },
-      {
-        q: 'Y a-t-il une période d\'essai pour PRO ?',
-        a: 'Oui ! 30 jours satisfait ou remboursé, sans question posée. Testez toutes les fonctionnalités PRO sans risque.'
-      }
     ]
   },
   {
@@ -162,6 +159,7 @@ const faqs = [
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<string | null>(null);
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-white pt-24">
@@ -251,6 +249,7 @@ export default function FAQ() {
             className="px-8 py-4 bg-black text-white rounded-full text-[16px]"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => router.push('/contact')}
           >
             Contactez-nous
           </motion.button>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, MapPin, Phone, Send } from 'lucide-react';
+import { Mail, Send, Clock, HelpCircle } from 'lucide-react';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -114,13 +114,12 @@ export default function Contact() {
             <div>
               <h2 className="text-[40px] leading-none tracking-tight mb-6">Informations</h2>
               <p className="text-[18px] text-gray-700 leading-relaxed mb-8">
-                Notre équipe est basée à Bruxelles et répond généralement dans les 24 heures 
-                (jours ouvrables).
+                Notre équipe répond généralement dans les 24 heures (jours ouvrables).
               </p>
             </div>
 
             {/* Contact Cards */}
-            <div className="space-y-4">
+            <div className="space-y-4 mb-6">
               <motion.div
                 className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border-2 border-blue-300"
                 whileHover={{ scale: 1.03 }}
@@ -128,26 +127,20 @@ export default function Contact() {
                 <Mail size={32} className="text-blue-600 mb-3" />
                 <h3 className="text-[20px] tracking-tight mb-1">Email</h3>
                 <p className="text-[16px] text-gray-700">contact@naeliv.com</p>
-              </motion.div>
-
-              <motion.div
-                className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border-2 border-green-300"
-                whileHover={{ scale: 1.03 }}
-              >
-                <MapPin size={32} className="text-green-600 mb-3" />
-                <h3 className="text-[20px] tracking-tight mb-1">Adresse</h3>
-                <p className="text-[16px] text-gray-700">
-                  Avenue Louise 123<br />
-                  1050 Bruxelles, Belgique
-                </p>
+                <a 
+                  href="mailto:contact@naeliv.com"
+                  className="text-[14px] text-blue-600 hover:underline mt-2 inline-block"
+                >
+                  Envoyer un email →
+                </a>
               </motion.div>
 
               <motion.div
                 className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border-2 border-purple-300"
                 whileHover={{ scale: 1.03 }}
               >
-                <Phone size={32} className="text-purple-600 mb-3" />
-                <h3 className="text-[20px] tracking-tight mb-1">Support</h3>
+                <Clock size={32} className="text-purple-600 mb-3" />
+                <h3 className="text-[20px] tracking-tight mb-1">Temps de réponse</h3>
                 <p className="text-[16px] text-gray-700">
                   Lundi - Vendredi<br />
                   9h00 - 18h00 CET
@@ -159,12 +152,19 @@ export default function Contact() {
             <motion.div
               className="p-6 bg-black text-white rounded-2xl"
               whileHover={{ scale: 1.03 }}
+              onClick={() => window.location.href = '/faq'}
+              style={{ cursor: 'pointer' }}
             >
-              <h3 className="text-[24px] tracking-tight mb-2">Questions fréquentes ?</h3>
-              <p className="text-[16px] text-gray-300 mb-4">
-                Consultez notre FAQ pour des réponses rapides.
-              </p>
-              <button className="px-6 py-2 bg-white text-black rounded-full text-[14px]">
+              <div className="flex items-start gap-3 mb-3">
+                <HelpCircle size={24} className="text-white mt-1 flex-shrink-0" />
+                <div>
+                  <h3 className="text-[24px] tracking-tight mb-2">Questions fréquentes ?</h3>
+                  <p className="text-[16px] text-gray-300 mb-4">
+                    Consultez notre FAQ pour des réponses rapides.
+                  </p>
+                </div>
+              </div>
+              <button className="px-6 py-2 bg-white text-black rounded-full text-[14px] hover:bg-gray-100 transition-colors">
                 Voir la FAQ
               </button>
             </motion.div>

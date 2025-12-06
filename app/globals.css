@@ -2644,3 +2644,61 @@ html {
   initial-value: "";
 }
 
+/* Styles pour les liens dans les emails */
+.email-content a,
+.email-html-content a,
+.email-text-content a {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+  text-decoration-color: #2563eb !important;
+  text-underline-offset: 2px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.email-content a:hover,
+.email-html-content a:hover,
+.email-text-content a:hover {
+  color: #1d4ed8 !important;
+  text-decoration-color: #1d4ed8 !important;
+  background-color: rgba(37, 99, 235, 0.1);
+  border-radius: 2px;
+  padding: 1px 2px;
+}
+
+.email-content a.email-link,
+.email-html-content a.email-link,
+.email-text-content a.email-link {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+  text-decoration-color: #2563eb !important;
+  text-underline-offset: 2px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+.email-content a.email-link:hover,
+.email-html-content a.email-link:hover,
+.email-text-content a.email-link:hover {
+  color: #1d4ed8 !important;
+  text-decoration-color: #1d4ed8 !important;
+  background-color: rgba(37, 99, 235, 0.1);
+  border-radius: 2px;
+  padding: 1px 2px;
+}
+
+.email-content a.email-address,
+.email-html-content a.email-address,
+.email-text-content a.email-address {
+  color: #059669 !important;
+  text-decoration-color: #059669 !important;
+}
+
+.email-content a.email-address:hover,
+.email-html-content a.email-address:hover,
+.email-text-content a.email-address:hover {
+  color: #047857 !important;
+  text-decoration-color: #047857 !important;
+  background-color: rgba(5, 150, 105, 0.1);
+}
+

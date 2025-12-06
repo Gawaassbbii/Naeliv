@@ -33,7 +33,7 @@ export function Footer() {
             <Link href="/">
               <div className="flex items-center gap-3 mb-4 cursor-pointer">
               <motion.h3 
-                className="text-[40px] leading-none tracking-tighter text-white font-medium"
+                className="text-[40px] leading-none font-sans font-bold tracking-tight text-white"
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.3 }}
               >
@@ -87,7 +87,6 @@ export function Footer() {
             <ul className="space-y-2 text-[14px]">
               {[
                 { label: 'À propos', page: 'a-propos' },
-                { label: 'Blog', page: 'blog' },
                 { label: 'Contact', page: 'contact' },
                 { label: 'FAQ', page: 'faq' }
               ].map((item, index) => (
