@@ -1035,7 +1035,7 @@ function MailPageContent() {
   
   return (
     <div 
-      className="h-screen overflow-hidden overflow-x-hidden flex flex-col transition-colors"
+      className="h-screen overflow-hidden overflow-x-hidden flex flex-col transition-colors max-w-full"
       style={{
         backgroundColor: theme === 'dark' ? '#111827' : '#ffffff',
         color: theme === 'dark' ? '#f3f4f6' : '#111827',
@@ -1075,7 +1075,7 @@ function MailPageContent() {
       )}
 
       {/* Main Content Area - Fixed height, no scroll */}
-      <div className="flex-1 flex h-full overflow-hidden overflow-x-hidden">
+      <div className="flex-1 flex h-full overflow-hidden overflow-x-hidden max-w-full">
         {/* Sidebar - Fixed height, scrollable */}
         <Sidebar 
           user={user}
@@ -1088,7 +1088,7 @@ function MailPageContent() {
         />
 
         {/* Email List and Viewer - Takes remaining space */}
-        <div className="flex-1 flex h-full overflow-hidden overflow-x-hidden">
+        <div className="flex-1 flex h-full overflow-hidden overflow-x-hidden max-w-full min-w-0">
           {/* Email List - Scrollable */}
           <EmailList 
             emails={getFilteredEmails()}
