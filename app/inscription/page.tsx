@@ -632,7 +632,7 @@ export default function Inscription() {
                     Vous serez redirigé vers notre page de paiement sécurisée après la création de votre compte.
                   </p>
                   <div className="bg-white border border-gray-300 rounded-lg p-4 text-[12px] text-gray-500">
-                    💳 Premier mois offert · Annulation à tout moment · Paiement sécurisé
+                    Très prochainement
                   </div>
                 </div>
               )}
@@ -701,7 +701,7 @@ export default function Inscription() {
         {/* Trust Indicators */}
         <div className="mt-12 pt-8 border-t border-gray-300 text-center text-[12px] text-gray-500">
           <p>
-            🔒 Connexion sécurisée · 🇪🇺 Données hébergées en Europe · 🚫 Aucune publicité
+            Connexion sécurisée · Données hébergées en Europe · Aucune publicité
           </p>
         </div>
       </div>
