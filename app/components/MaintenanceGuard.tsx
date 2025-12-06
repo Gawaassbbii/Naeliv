@@ -186,6 +186,17 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     setHasBeta(true);
   }
 
+  // Re-vérifier le cookie bêta au moment du render (synchrone) pour éviter les problèmes de timing
+  // C'est crucial car le cookie peut être créé après le useEffect initial
+  const currentBetaAccess = hasBetaAccess();
+  const effectiveBetaAccess = currentBetaAccess || hasBeta;
+  
+  // Si le cookie est maintenant présent mais n'était pas détecté avant, mettre à jour l'état
+  if (currentBetaAccess && !hasBeta) {
+    console.log('🔄 [MaintenanceGuard] Cookie bêta détecté au moment du render, mise à jour de l\'état');
+    setHasBeta(true);
+  }
+
   // Si maintenance activée et admin OU utilisateur avec cookie bêta, afficher une bannière et permettre l'accès complet
   if (isMaintenance === true && (isAdmin === true || effectiveBetaAccess)) {
     console.log('✅ [MaintenanceGuard] Accès autorisé - Maintenance:', isMaintenance, 'Admin:', isAdmin, 'Beta (état):', hasBeta, 'Beta (actuel):', currentBetaAccess);
@@ -203,16 +214,6 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
         {children}
       </>
     );
-  }
-
-  // Re-vérifier le cookie bêta au moment du render (synchrone) pour éviter les problèmes de timing
-  const currentBetaAccess = hasBetaAccess();
-  const effectiveBetaAccess = currentBetaAccess || hasBeta;
-  
-  // Si le cookie est maintenant présent mais n'était pas détecté avant, mettre à jour l'état
-  if (currentBetaAccess && !hasBeta) {
-    console.log('🔄 [MaintenanceGuard] Cookie bêta détecté au moment du render, mise à jour de l\'état');
-    setHasBeta(true);
   }
 
   // Si maintenance activée et pas admin et pas de cookie bêta
