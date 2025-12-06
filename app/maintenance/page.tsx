@@ -46,15 +46,28 @@ export default function MaintenancePage() {
       
       document.cookie = cookieString;
       
-      console.log('✅ [BETA ACCESS] Cookie créé:', document.cookie);
-      console.log('✅ [BETA ACCESS] Cookie créé avec succès, redirection vers la page d\'accueil');
+      console.log('✅ [BETA ACCESS] Cookie créé, string:', cookieString);
+      console.log('✅ [BETA ACCESS] Tous les cookies après création:', document.cookie);
       
       // Attendre un peu pour s'assurer que le cookie est bien écrit
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Vérifier que le cookie a bien été créé
-      const cookieCheck = document.cookie.split(';').find(c => c.trim().startsWith('naeliv_beta_access='));
+      // Vérifier que le cookie a bien été créé en relisant document.cookie
+      const allCookies = document.cookie;
+      const cookieCheck = allCookies.split(';').find(c => {
+        const trimmed = c.trim();
+        return trimmed.startsWith('naeliv_beta_access=') && trimmed.includes('true');
+      });
+      
       console.log('✅ [BETA ACCESS] Vérification cookie après création:', cookieCheck);
+      console.log('✅ [BETA ACCESS] Cookie présent:', !!cookieCheck);
+      
+      if (!cookieCheck) {
+        console.error('❌ [BETA ACCESS] Le cookie n\'a pas été créé correctement, réessai...');
+        // Réessayer de créer le cookie
+        document.cookie = cookieString;
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
       
       // Rediriger vers la page d'accueil pour un accès complet au site
       // Utiliser window.location.href pour un rechargement complet qui réinitialise le MaintenanceGuard

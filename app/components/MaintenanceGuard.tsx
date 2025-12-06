@@ -16,14 +16,25 @@ const ADMIN_EMAIL = 'gabi@naeliv.com';
 // Fonction helper pour vérifier le cookie bêta
 const hasBetaAccess = (): boolean => {
   if (typeof document === 'undefined') return false;
-  const cookies = document.cookie.split(';');
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split('=');
-    if (name === 'naeliv_beta_access' && value === 'true') {
-      return true;
+  try {
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const trimmed = cookie.trim();
+      if (trimmed.startsWith('naeliv_beta_access=')) {
+        const value = trimmed.substring('naeliv_beta_access='.length);
+        // Vérifier que la valeur est 'true' (peut inclure des espaces ou autres caractères après)
+        if (value === 'true' || value.startsWith('true')) {
+          console.log('✅ [hasBetaAccess] Cookie bêta trouvé:', trimmed);
+          return true;
+        }
+      }
     }
+    console.log('❌ [hasBetaAccess] Cookie bêta non trouvé. Cookies:', document.cookie);
+    return false;
+  } catch (error) {
+    console.error('❌ [hasBetaAccess] Erreur lors de la vérification du cookie:', error);
+    return false;
   }
-  return false;
 };
 
 export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
