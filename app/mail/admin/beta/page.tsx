@@ -126,14 +126,32 @@ export default function AdminBetaPage() {
 
   const handleToggleActive = async (codeId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('beta_codes')
-        .update({ is_active: !currentStatus })
-        .eq('id', codeId);
+      // Récupérer le token de session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        toast.error('Utilisateur non connecté');
+        return;
+      }
 
-      if (error) {
-        console.error('Erreur lors de la mise à jour:', error);
-        toast.error('Erreur lors de la mise à jour');
+      // Appeler l'API pour activer/désactiver le code
+      const response = await fetch('/api/beta/toggle-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          codeId,
+          currentStatus
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Erreur lors de la mise à jour:', data);
+        toast.error(data.error || 'Erreur lors de la mise à jour');
         return;
       }
 
@@ -151,14 +169,31 @@ export default function AdminBetaPage() {
     }
 
     try {
-      const { error } = await supabase
-        .from('beta_codes')
-        .delete()
-        .eq('id', codeId);
+      // Récupérer le token de session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        toast.error('Utilisateur non connecté');
+        return;
+      }
 
-      if (error) {
-        console.error('Erreur lors de la suppression:', error);
-        toast.error('Erreur lors de la suppression');
+      // Appeler l'API pour supprimer le code
+      const response = await fetch('/api/beta/delete-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          codeId
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Erreur lors de la suppression:', data);
+        toast.error(data.error || 'Erreur lors de la suppression');
         return;
       }
 
