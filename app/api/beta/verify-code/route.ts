@@ -34,9 +34,13 @@ export async function POST(request: NextRequest) {
       .eq('code', code.trim().toUpperCase())
       .single();
 
+    // Si le code n'existe pas (supprimé ou incorrect)
     if (fetchError || !betaCode) {
       return NextResponse.json(
-        { error: 'Code incorrect ou expiré' },
+        { 
+          error: 'Malheureusement votre code d\'accès a été supprimé, contactez le support',
+          code_status: 'deleted'
+        },
         { status: 404 }
       );
     }
@@ -44,7 +48,10 @@ export async function POST(request: NextRequest) {
     // Vérifier si le code est actif
     if (!betaCode.is_active) {
       return NextResponse.json(
-        { error: 'Code incorrect ou expiré' },
+        { 
+          error: 'Malheureusement votre code d\'accès a été désactivé, contactez le support',
+          code_status: 'disabled'
+        },
         { status: 403 }
       );
     }

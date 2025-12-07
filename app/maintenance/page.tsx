@@ -27,6 +27,7 @@ export default function MaintenancePage() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Afficher le message spécifique retourné par l'API
         setError(data.error || 'Code incorrect ou expiré');
         setLoading(false);
         return;
