@@ -534,6 +534,7 @@ function MailPageContent() {
           from: email.from_name || email.from_email,
           from_name: email.from_name || null,
           from_email: email.from_email || null,
+          from_avatar_url: email.from_avatar_url || null, // Ajouter l'avatar de l'expéditeur
           subject: email.subject,
           preview: email.preview || body?.substring(0, 100) || '',
           time: new Date(email.received_at || email.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
@@ -2239,13 +2240,34 @@ function EmailList({ emails, selectedEmail, onSelectEmail, activeFolder, isLoadi
                       {email.hasPaidStamp && (
                         <Shield size={14} className="text-blue-600 flex-shrink-0" strokeWidth={2.5} />
                       )}
-                      {/* Avatar avec initiales */}
-                      <div 
-                        className="w-12 h-12 rounded-full flex items-center justify-center text-white text-[14px] font-semibold flex-shrink-0"
-                        style={{ backgroundColor: getAvatarColor(email.from_name || email.from_email) }}
-                      >
-                        {getInitials(email.from_name || email.from_email)}
-                      </div>
+                      {/* Avatar avec photo ou initiales */}
+                      {email.from_avatar_url ? (
+                        <img 
+                          src={email.from_avatar_url} 
+                          alt={email.from_name || email.from_email}
+                          className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                          onError={(e) => {
+                            // En cas d'erreur de chargement, utiliser les initiales
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              const fallback = document.createElement('div');
+                              fallback.className = 'w-12 h-12 rounded-full flex items-center justify-center text-white text-[14px] font-semibold flex-shrink-0';
+                              fallback.style.backgroundColor = getAvatarColor(email.from_name || email.from_email);
+                              fallback.textContent = getInitials(email.from_name || email.from_email);
+                              parent.appendChild(fallback);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div 
+                          className="w-12 h-12 rounded-full flex items-center justify-center text-white text-[14px] font-semibold flex-shrink-0"
+                          style={{ backgroundColor: getAvatarColor(email.from_name || email.from_email) }}
+                        >
+                          {getInitials(email.from_name || email.from_email)}
+                        </div>
+                      )}
                       {/* Nom et email */}
                       <div className="flex-1 min-w-0">
                         {email.from_name ? (
@@ -2795,13 +2817,34 @@ function EmailViewer({ email, activeFolder, onArchive, onDelete, onReply, onForw
           </div>
           <div className="flex items-center gap-4 text-[14px]">
             <div className="flex items-center gap-3 flex-1">
-              {/* Avatar avec initiales */}
-              <div 
-                className="w-16 h-16 rounded-full flex items-center justify-center text-white text-[18px] font-semibold flex-shrink-0"
-                style={{ backgroundColor: getAvatarColor(email.from_name || email.from_email) }}
-              >
-                {getInitials(email.from_name || email.from_email)}
-              </div>
+              {/* Avatar avec photo ou initiales */}
+              {email.from_avatar_url ? (
+                <img 
+                  src={email.from_avatar_url} 
+                  alt={email.from_name || email.from_email}
+                  className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                  onError={(e) => {
+                    // En cas d'erreur de chargement, utiliser les initiales
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const fallback = document.createElement('div');
+                      fallback.className = 'w-16 h-16 rounded-full flex items-center justify-center text-white text-[18px] font-semibold flex-shrink-0';
+                      fallback.style.backgroundColor = getAvatarColor(email.from_name || email.from_email);
+                      fallback.textContent = getInitials(email.from_name || email.from_email);
+                      parent.appendChild(fallback);
+                    }
+                  }}
+                />
+              ) : (
+                <div 
+                  className="w-16 h-16 rounded-full flex items-center justify-center text-white text-[18px] font-semibold flex-shrink-0"
+                  style={{ backgroundColor: getAvatarColor(email.from_name || email.from_email) }}
+                >
+                  {getInitials(email.from_name || email.from_email)}
+                </div>
+              )}
               {/* Nom et email */}
               <div className="flex-1 min-w-0">
                 {email.from_name ? (

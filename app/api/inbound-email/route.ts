@@ -645,6 +645,27 @@ export async function POST(request: NextRequest) {
       console.log(`✅ [ZEN MODE] Zen Mode désactivé, email visible immédiatement`);
     }
 
+    // 14.5. Récupérer l'avatar de l'expéditeur si c'est un utilisateur @naeliv.com
+    let senderAvatarUrl: string | null = null;
+    const senderEmailForAvatar = sanitizedData.fromEmail.toLowerCase().trim();
+    if (senderEmailForAvatar.endsWith('@naeliv.com')) {
+      try {
+        const { data: senderProfile } = await (supabaseAdmin || clientToUse)
+          .from('profiles')
+          .select('avatar_url')
+          .eq('email', senderEmailForAvatar)
+          .single();
+        
+        if (senderProfile?.avatar_url) {
+          senderAvatarUrl = senderProfile.avatar_url;
+          console.log(`✅ [INBOUND EMAIL] Avatar trouvé pour expéditeur ${senderEmailForAvatar}`);
+        }
+      } catch (avatarError: any) {
+        // Erreur silencieuse - ce n'est pas critique si l'avatar n'est pas trouvé
+        console.log(`ℹ️ [INBOUND EMAIL] Avatar non trouvé pour ${senderEmailForAvatar} (normal si utilisateur externe)`);
+      }
+    }
+
     // 15. Stocker l'email dans Supabase
     // Utiliser le client admin (service role) pour contourner RLS, ou la fonction PostgreSQL
     let email: any;
@@ -658,6 +679,7 @@ export async function POST(request: NextRequest) {
           user_id: profile.id,
           from_email: sanitizedData.fromEmail,
           from_name: sanitizedData.fromName,
+          from_avatar_url: senderAvatarUrl, // Ajouter l'avatar de l'expéditeur
           subject: modifiedSubject, // Utiliser le sujet modifié (avec tag si alias système)
           body: sanitizedData.textBody,
           body_html: sanitizedData.htmlBody,

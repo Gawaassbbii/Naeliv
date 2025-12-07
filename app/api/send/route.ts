@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Récupérer le profil utilisateur (prénom, email, plan)
+    // 4. Récupérer le profil utilisateur (prénom, email, plan, avatar_url)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('first_name, email, plan')
+      .select('first_name, email, plan, avatar_url')
       .eq('id', user.id)
       .single();
 
@@ -182,6 +182,7 @@ export async function POST(request: NextRequest) {
       user_id: user.id,
       from_email: fromEmail, // Utiliser from_email au lieu de from
       from_name: firstName, // Ajouter le nom
+      from_avatar_url: profile.avatar_url || null, // Ajouter l'avatar de l'expéditeur
       to_email: Array.isArray(to) ? to : [to], // Utiliser to_email (array)
       subject: subject,
       body: text || null, // Utiliser body au lieu de text
