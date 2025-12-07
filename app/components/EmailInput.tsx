@@ -130,7 +130,7 @@ export default function EmailInput({
         
         {/* Indicateur de validation */}
         {value && value.trim() !== '' && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             {isValidating ? (
               <Loader2 size={16} className="animate-spin text-gray-400" />
             ) : (
@@ -148,9 +148,19 @@ export default function EmailInput({
                     });
 
                     if (allValid && emails.length > 0) {
-                      return <Check size={16} className="text-green-500" />;
+                      return (
+                        <div className="flex items-center gap-1">
+                          <Check size={14} className="text-green-500" />
+                          <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">{emails.length}</span>
+                        </div>
+                      );
                     } else if (allInvalid && emails.length > 0) {
-                      return <X size={16} className="text-red-500" />;
+                      return (
+                        <div className="flex items-center gap-1">
+                          <X size={14} className="text-red-500" />
+                          <span className="text-[10px] text-red-600 dark:text-red-400 font-medium">{emails.length}</span>
+                        </div>
+                      );
                     }
                     return null;
                   } else {
@@ -160,7 +170,7 @@ export default function EmailInput({
                         <div className="flex items-center gap-1.5">
                           {result.provider && (
                             <div 
-                              className="flex items-center justify-center w-5 h-5 rounded text-white text-[10px] font-bold"
+                              className="flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-bold shadow-sm"
                               style={{ backgroundColor: result.provider.color }}
                               title={result.provider.name}
                             >
@@ -182,9 +192,9 @@ export default function EmailInput({
         )}
       </div>
 
-      {/* Affichage des tags pour mode multiple */}
+      {/* Affichage des tags pour mode multiple (CC) */}
       {multiple && value && parseEmailList(value).length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {parseEmailList(value).map((email, index) => {
             const result = getValidationResult(email);
             const domain = extractDomain(email);
@@ -193,7 +203,7 @@ export default function EmailInput({
             return (
               <div
                 key={index}
-                className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[12px] border ${
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] border max-w-[200px] ${
                   result.valid
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
                     : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
@@ -201,18 +211,18 @@ export default function EmailInput({
               >
                 {result.valid && provider && (
                   <div 
-                    className="flex items-center justify-center w-4 h-4 rounded text-white text-[9px] font-bold"
+                    className="flex items-center justify-center w-3.5 h-3.5 rounded-full text-white text-[8px] font-bold flex-shrink-0"
                     style={{ backgroundColor: provider.color }}
                     title={provider.name}
                   >
                     {provider.logoContent}
                   </div>
                 )}
-                <span>{email}</span>
+                <span className="truncate flex-1 min-w-0">{email}</span>
                 {result.valid ? (
-                  <Check size={12} className="text-green-500" />
+                  <Check size={10} className="text-green-500 flex-shrink-0" />
                 ) : (
-                  <X size={12} className="text-red-500" />
+                  <X size={10} className="text-red-500 flex-shrink-0" />
                 )}
               </div>
             );
