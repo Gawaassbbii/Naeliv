@@ -164,11 +164,7 @@ export default function EmailInput({
                               style={{ backgroundColor: result.provider.color }}
                               title={result.provider.name}
                             >
-                              {typeof result.provider.logo === 'string' ? (
-                                <span>{result.provider.logo}</span>
-                              ) : (
-                                result.provider.logo
-                              )}
+                              {result.provider.logoContent}
                             </div>
                           )}
                           <Check size={16} className="text-green-500" />
@@ -209,11 +205,7 @@ export default function EmailInput({
                     style={{ backgroundColor: provider.color }}
                     title={provider.name}
                   >
-                    {typeof provider.logo === 'string' ? (
-                      <span>{provider.logo}</span>
-                    ) : (
-                      provider.logo
-                    )}
+                    {provider.logoContent}
                   </div>
                 )}
                 <span>{email}</span>

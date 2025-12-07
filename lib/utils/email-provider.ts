@@ -4,7 +4,8 @@
 
 export interface EmailProviderInfo {
   name: string;
-  logo: string | React.ReactNode;
+  logoType: 'icon' | 'text';
+  logoContent: string;
   color: string;
 }
 
@@ -38,108 +39,86 @@ export function getEmailProvider(domain: string | null): EmailProviderInfo | nul
   const providers: Record<string, EmailProviderInfo> = {
     'gmail.com': {
       name: 'Gmail',
-      logo: (
-        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-          <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
-        </svg>
-      ),
+      logoType: 'text',
+      logoContent: 'G',
       color: '#EA4335'
     },
     'naver.com': {
       name: 'Naver',
-      logo: (
-        <span className="font-bold text-[10px] text-[#03C75A]">N</span>
-      ),
+      logoType: 'text',
+      logoContent: 'N',
       color: '#03C75A'
     },
     'outlook.com': {
       name: 'Outlook',
-      logo: (
-        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-          <path d="M7.5 13.5L1.5 9.75 7.5 6v7.5zm3 0V6l6 3.75L10.5 13.5zm0 0l-3 1.875v-1.875l3-1.875zm-3 0v1.875L1.5 15 4.5 13.5z"/>
-        </svg>
-      ),
+      logoType: 'text',
+      logoContent: 'O',
       color: '#0078D4'
     },
     'hotmail.com': {
       name: 'Hotmail',
-      logo: (
-        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-          <path d="M7.5 13.5L1.5 9.75 7.5 6v7.5zm3 0V6l6 3.75L10.5 13.5zm0 0l-3 1.875v-1.875l3-1.875zm-3 0v1.875L1.5 15 4.5 13.5z"/>
-        </svg>
-      ),
+      logoType: 'text',
+      logoContent: 'O',
       color: '#0078D4'
     },
     'yahoo.com': {
       name: 'Yahoo',
-      logo: (
-        <span className="font-bold text-[10px] text-[#6001D2]">Y!</span>
-      ),
+      logoType: 'text',
+      logoContent: 'Y!',
       color: '#6001D2'
     },
     'icloud.com': {
       name: 'iCloud',
-      logo: (
-        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
-          <path d="M13.762 4.29a6.051 6.051 0 0 0-3.85 1.37 4.8 4.8 0 0 0-1.97 3.69 4.78 4.78 0 0 0-2.94-1.01c-2.6 0-4.7 2.11-4.7 4.7 0 .38.04.75.13 1.1-1.97.42-3.42 2.14-3.42 4.19 0 2.35 1.9 4.26 4.26 4.26h15.84c2.6 0 4.71-2.11 4.71-4.71 0-2.6-2.11-4.71-4.71-4.71-.07 0-.14.01-.21.01-.7-2.56-3.06-4.4-5.84-4.4z"/>
-        </svg>
-      ),
+      logoType: 'text',
+      logoContent: 'i',
       color: '#3693F3'
     },
     'protonmail.com': {
       name: 'ProtonMail',
-      logo: (
-        <span className="font-bold text-[10px]">P</span>
-      ),
+      logoType: 'text',
+      logoContent: 'P',
       color: '#6D4AFF'
     },
     'proton.me': {
       name: 'Proton',
-      logo: (
-        <span className="font-bold text-[10px]">P</span>
-      ),
+      logoType: 'text',
+      logoContent: 'P',
       color: '#6D4AFF'
     },
     'naeliv.com': {
       name: 'Naeliv',
-      logo: (
-        <span className="font-bold text-[10px] text-purple-600">N</span>
-      ),
+      logoType: 'text',
+      logoContent: 'N',
       color: '#9333EA'
     },
     'mail.com': {
       name: 'Mail.com',
-      logo: (
-        <span className="font-bold text-[10px]">M</span>
-      ),
+      logoType: 'text',
+      logoContent: 'M',
       color: '#0066CC'
     },
     'aol.com': {
       name: 'AOL',
-      logo: (
-        <span className="font-bold text-[10px]">AOL</span>
-      ),
+      logoType: 'text',
+      logoContent: 'AOL',
       color: '#3399FF'
     },
     'zoho.com': {
       name: 'Zoho',
-      logo: (
-        <span className="font-bold text-[10px]">Z</span>
-      ),
+      logoType: 'text',
+      logoContent: 'Z',
       color: '#CC0000'
     },
     'yandex.com': {
       name: 'Yandex',
-      logo: (
-        <span className="font-bold text-[10px]">Y</span>
-      ),
+      logoType: 'text',
+      logoContent: 'Y',
       color: '#FC3F1D'
     },
     'tutanota.com': {
       name: 'Tutanota',
-      logo: (
-        <span className="font-bold text-[10px]">T</span>
-      ),
+      logoType: 'text',
+      logoContent: 'T',
       color: '#840010'
     }
   };
