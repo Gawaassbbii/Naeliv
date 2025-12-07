@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     // 5. Parser le body de la requête
     const body = await request.json();
-    let { to, subject, text, html, inReplyTo, references } = body;
+    let { to, cc, subject, text, html, inReplyTo, references } = body;
 
     // 6. Validation
     if (!to || !subject) {
@@ -148,10 +148,22 @@ export async function POST(request: NextRequest) {
       headers['References'] = inReplyTo;
     }
 
-    // 9. Envoyer l'email via Resend
+    // 9. Parser le CC si présent (peut être une chaîne ou un tableau)
+    let ccArray: string[] | undefined;
+    if (cc) {
+      if (typeof cc === 'string') {
+        // Parser la chaîne (virgules ou points-virgules)
+        ccArray = cc.split(/[,;]/).map(email => email.trim()).filter(email => email.length > 0);
+      } else if (Array.isArray(cc)) {
+        ccArray = cc.map(email => typeof email === 'string' ? email.trim() : String(email)).filter(email => email.length > 0);
+      }
+    }
+
+    // 10. Envoyer l'email via Resend
     console.log('📧 [SEND EMAIL] Envoi en cours:', {
       from,
       to: Array.isArray(to) ? to : [to],
+      cc: ccArray,
       subject,
       hasText: !!text,
       hasHtml: !!html,
@@ -161,6 +173,7 @@ export async function POST(request: NextRequest) {
     const { data: emailData, error: sendError } = await resend.emails.send({
       from,
       to: Array.isArray(to) ? to : [to],
+      cc: ccArray && ccArray.length > 0 ? ccArray : undefined,
       subject,
       text: text || undefined,
       html: html || undefined,
@@ -177,13 +190,14 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ [SEND EMAIL] Email envoyé avec succès:', emailData);
 
-    // 10. Sauvegarder l'email dans Supabase (dossier "sent")
+    // 11. Sauvegarder l'email dans Supabase (dossier "sent")
     const emailRecord = {
       user_id: user.id,
       from_email: fromEmail, // Utiliser from_email au lieu de from
       from_name: firstName, // Ajouter le nom
       from_avatar_url: profile.avatar_url || null, // Ajouter l'avatar de l'expéditeur
       to_email: Array.isArray(to) ? to : [to], // Utiliser to_email (array)
+      cc_email: ccArray && ccArray.length > 0 ? ccArray : undefined, // Ajouter le CC (tableau PostgreSQL TEXT[])
       subject: subject,
       body: text || null, // Utiliser body au lieu de text
       body_html: html || null, // Utiliser body_html au lieu de html
@@ -214,7 +228,7 @@ export async function POST(request: NextRequest) {
       console.log('✅ [SEND EMAIL] Email sauvegardé dans Supabase (dossier sent)');
     }
 
-    // 11. Retourner le succès
+    // 12. Retourner le succès
     return NextResponse.json({
       success: true,
       messageId: emailData?.id,

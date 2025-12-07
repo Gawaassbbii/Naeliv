@@ -11,6 +11,7 @@ import { useTheme, ThemeProvider } from '@/app/contexts/ThemeContext';
 import { translations } from '@/app/translations/mail';
 import { Switch } from '@/app/components/ui/switch';
 import { EMAIL_PROVIDERS, ALL_BLOCKED_DOMAINS_FLAT } from '@/lib/email-providers';
+import EmailInput from '@/app/components/EmailInput';
 
 // ============================================================================
 // CONSTANTS
@@ -302,6 +303,7 @@ function MailPageContent() {
   });
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [composeTo, setComposeTo] = useState('');
+  const [composeCC, setComposeCC] = useState('');
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -1154,6 +1156,7 @@ function MailPageContent() {
         },
         body: JSON.stringify({
           to: composeTo,
+          cc: composeCC || undefined,
           subject: composeSubject,
           text: composeBody,
           html: `<p>${composeBody.replace(/\n/g, '<br>')}</p>`,
@@ -1171,6 +1174,7 @@ function MailPageContent() {
       // Fermer la modale et réinitialiser
       setIsComposeOpen(false);
       setComposeTo('');
+      setComposeCC('');
       setComposeSubject('');
       setComposeBody('');
       
@@ -1406,19 +1410,20 @@ function MailPageContent() {
 
             {/* Form */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div>
-                <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  À
-                </label>
-                <input
-                  type="email"
-                  value={composeTo}
-                  onChange={(e) => setComposeTo(e.target.value)}
-                  placeholder="destinataire@example.com"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-[14px] bg-white dark:bg-gray-800 text-black dark:text-white"
-                  autoFocus
-                />
-              </div>
+              <EmailInput
+                value={composeTo}
+                onChange={setComposeTo}
+                label="À"
+                placeholder="destinataire@example.com"
+              />
+
+              <EmailInput
+                value={composeCC}
+                onChange={setComposeCC}
+                label="CC"
+                placeholder="cc1@example.com, cc2@example.com"
+                multiple={true}
+              />
 
               <div>
                 <label className="block text-[14px] font-medium text-gray-700 dark:text-gray-300 mb-2">
