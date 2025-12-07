@@ -27,7 +27,7 @@ export default function EmailInput({
 }: EmailInputProps) {
   const [isValidating, setIsValidating] = useState(false);
   const [validationResults, setValidationResults] = useState<Record<string, { valid: boolean; provider: ReturnType<typeof getEmailProvider> }>>({});
-  const validationTimeoutRef = useRef<NodeJS.Timeout>();
+  const validationTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Fonction pour valider un email
   const validateEmail = async (email: string): Promise<{ valid: boolean; provider: ReturnType<typeof getEmailProvider> }> => {
