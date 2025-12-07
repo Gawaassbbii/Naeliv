@@ -28,6 +28,31 @@ export default function EmailInput({
   const [isValidating, setIsValidating] = useState(false);
   const [validationResults, setValidationResults] = useState<Record<string, { valid: boolean; provider: ReturnType<typeof getEmailProvider> }>>({});
   const validationTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+
+  // Fonction pour obtenir l'URL du logo
+  const getLogoUrl = (domain: string | null): string | null => {
+    if (!domain) return null;
+    
+    // Cas spécial pour Naeliv
+    if (domain === 'naeliv.com') {
+      return '/logo.png';
+    }
+    
+    // Utiliser l'API Google Favicons pour les autres domaines
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  };
+
+  // Gérer les erreurs de chargement d'image
+  const handleImageError = (domain: string) => {
+    setImageErrors(prev => new Set(prev).add(domain));
+  };
+
+  // Vérifier si une image a échoué à charger
+  const hasImageError = (domain: string | null): boolean => {
+    if (!domain) return true;
+    return imageErrors.has(domain);
+  };
 
   // Fonction pour valider un email
   const validateEmail = async (email: string): Promise<{ valid: boolean; provider: ReturnType<typeof getEmailProvider> }> => {
@@ -122,7 +147,7 @@ export default function EmailInput({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full px-4 py-2.5 pr-24 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-[14px] bg-white dark:bg-gray-800 text-black dark:text-white ${
+          className={`w-full px-4 py-3 pr-28 min-h-[44px] border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-[14px] bg-white dark:bg-gray-800 text-black dark:text-white flex items-center ${
             disabled ? 'opacity-50 cursor-not-allowed' : ''
           }`}
           autoFocus={!multiple}
@@ -166,15 +191,30 @@ export default function EmailInput({
                   } else {
                     const result = getValidationResult(value);
                     if (result.valid) {
+                      const domain = extractDomain(value);
+                      const logoUrl = getLogoUrl(domain);
+                      const showImage = logoUrl && !hasImageError(domain);
+                      
                       return (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           {result.provider && (
                             <div 
-                              className="flex items-center justify-center w-6 h-6 rounded-full text-white text-[11px] font-bold shadow-sm"
-                              style={{ backgroundColor: result.provider.color }}
+                              className="flex items-center justify-center w-6 h-6 rounded-full shadow-sm overflow-hidden"
+                              style={!showImage ? { backgroundColor: result.provider.color } : {}}
                               title={result.provider.name}
                             >
-                              {result.provider.logoContent}
+                              {showImage ? (
+                                <img
+                                  src={logoUrl}
+                                  alt={result.provider.name}
+                                  className="w-full h-full object-contain"
+                                  onError={() => domain && handleImageError(domain)}
+                                />
+                              ) : (
+                                <span className="text-white text-[11px] font-bold">
+                                  {result.provider.logoContent}
+                                </span>
+                              )}
                             </div>
                           )}
                           <Check size={18} className="text-green-500" />
@@ -199,11 +239,13 @@ export default function EmailInput({
             const result = getValidationResult(email);
             const domain = extractDomain(email);
             const provider = result.provider || getEmailProvider(domain);
+            const logoUrl = getLogoUrl(domain);
+            const showImage = logoUrl && !hasImageError(domain);
 
             return (
               <div
                 key={index}
-                className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] border max-w-[220px] ${
+                className={`inline-flex items-center gap-2.5 px-3 py-2 rounded-full text-[12px] border max-w-[220px] min-h-[36px] ${
                   result.valid
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
                     : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
@@ -211,11 +253,22 @@ export default function EmailInput({
               >
                 {result.valid && provider && (
                   <div 
-                    className="flex items-center justify-center w-4 h-4 rounded-full text-white text-[9px] font-bold flex-shrink-0"
-                    style={{ backgroundColor: provider.color }}
+                    className="flex items-center justify-center w-4 h-4 rounded-full flex-shrink-0 overflow-hidden"
+                    style={!showImage ? { backgroundColor: provider.color } : {}}
                     title={provider.name}
                   >
-                    {provider.logoContent}
+                    {showImage ? (
+                      <img
+                        src={logoUrl}
+                        alt={provider.name}
+                        className="w-full h-full object-contain"
+                        onError={() => domain && handleImageError(domain)}
+                      />
+                    ) : (
+                      <span className="text-white text-[9px] font-bold">
+                        {provider.logoContent}
+                      </span>
+                    )}
                   </div>
                 )}
                 <span className="truncate flex-1 min-w-0">{email}</span>
