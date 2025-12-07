@@ -44,9 +44,15 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.replace('Bearer ', '');
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { error: 'Configuration serveur invalide' },
+        { status: 500 }
+      );
+    }
+
     // Vérifier l'utilisateur via Supabase
-    const { data: { user }, error: authError } = await supabaseAdmin
-      ?.auth.getUser(token) || { data: { user: null }, error: null };
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
       return NextResponse.json(
@@ -57,10 +63,10 @@ export async function POST(request: NextRequest) {
 
     // Vérifier le plan PRO
     const { data: profile, error: profileError } = await supabaseAdmin
-      ?.from('profiles')
+      .from('profiles')
       .select('is_pro, plan')
       .eq('id', user.id)
-      .single() || { data: null, error: null };
+      .single();
 
     if (profileError || !profile) {
       return NextResponse.json(
